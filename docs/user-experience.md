@@ -66,7 +66,7 @@ Display persistent payment state and distinguish:
 - **Paid:** provider payment event verified; wallet ledger credit may still be pending.
 - **Credited:** wallet credit committed exactly once, balance refreshed, conversion can be started.
 - **Failed/canceled/expired:** no credit; explain next action.
-- **Reconciliation required:** ambiguous gateway state; never falsely indicate success.
+- **Reconciliation required:** ambiguous gateway state, including a provider-verified payment discovered after local expiry; explain that provider confirmation is being reconciled and do not show funds as spendable until exactly-once wallet credit commits.
 
 The UI must not return to a spend-ready state until credited. After credit, return to the current file/estimate and require explicit **Konversi PDF**. Never auto-start conversion from payment callback. QRIS is not displayed as available until a real vendor integration is verified.
 
