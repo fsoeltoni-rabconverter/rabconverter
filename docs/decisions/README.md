@@ -82,5 +82,15 @@ This log records decisions that affect product behavior, data contracts, cost an
 ## DEC-013 — Canonical page assessment and immutable export versions
 
 - Status: Approved.
-- Decision: JobPageBillingAssessment is the canonical final billability record tied to an exact export manifest; any SourcePage.billable value is a projection only. Every artifact version is immutable. Re-export within a job does not create a second job charge.
+- Decision: JobPageBillingAssessment is the canonical final billability record tied to an exact export manifest; any SourcePage.billable value is a projection only. Every artifact version is immutable. Re-export within a job does not create a second customer job charge.
 - Consequence: Any legitimate post-settlement billing adjustment is an audited compensating ledger entry, never silent historical rewriting.
+
+## DEC-014 — PR #3 operational and cost-accounting alignment
+
+- Status: Approved for MVP planning; implementation absent.
+- Corrections and billing: a correction/re-export creates a new immutable artifact version within the same job and never creates a second customer charge. If a confirmed post-settlement correction changes the settled amount, append an audited compensating ledger entry; do not rewrite settled history.
+- Queue boundary: default to no queue unless measured request/runtime limits require one. If needed, commit the job and reservation in the database first, dispatch to the queue after commit, and recover committed-but-undispatched jobs. Do not add another orchestration service.
+- Late payment: a provider-verified payment received after local expiry enters `reconciliation_required`; reconcile the provider state, then either credit exactly once or follow an explicit refund/reversal path. Never trust the browser redirect or auto-start conversion.
+- Provider timeout: persist provider job/request IDs and check the existing provider job status before retrying; never blindly duplicate a possibly running provider operation.
+- Provider COGS: log every attempt internally for per-job/per-attempt detail; use provider usage exports/invoices for aggregate reconciliation. Never infer provider cost from customer billable-page counts.
+- Commercial assumptions: keep Rp900–Rp1.000/page as a provisional provider-cost reserve only. Do not publish or rely on a per-page contribution estimate until total measured costs support it.
