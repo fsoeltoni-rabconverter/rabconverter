@@ -8,7 +8,7 @@ Pricing/billability rules are owned exclusively by [pricing-and-billing.md](pric
 
 **Unggah PDF RAB/BOQ → sistem mengerjakan konversi → unduh XLSX.**
 
-The user should not need to understand extraction, row mapping, formula reconstruction, queue, wallet ledger or settlement. Those are system responsibilities. The interface displays the cost ceiling, actual state, result and any decision genuinely needed to make the result safe.
+The user should not need to understand extraction, row mapping, formula reconstruction, queue, wallet ledger or settlement. Those are system responsibilities. The interface displays the cost ceiling, actual state, result and any decision genuinely needed to make the result safe. Do not add a queue pre-emptively. If runtime limits later require one, create the job/reservation in the database first, commit, dispatch separately, and recover any committed job whose dispatch failed.
 
 ## 2. Non-negotiable UX contract
 
@@ -86,6 +86,7 @@ flowchart TD
 - `paid` means the provider event is verified. `credited` means the corresponding wallet-ledger credit has committed exactly once. Only `credited` unlocks the wallet-funded conversion.
 - Webhook may be repeated or arrive before/after a browser redirect. Verify signature/authenticity and amount/currency/order reference; persist provider event ID uniquely; apply state and credit transactionally/idempotently. A redirect is UI navigation only.
 - For pending or ambiguous provider state, retain the order, show current status and wait/check status without creating duplicate orders automatically.
+- If provider verification confirms payment only after the local expiry time, move to `reconciliation_required`; verify the provider's final order/payment state and then either post exactly one wallet credit or follow a refund/reversal path. Do not credit from the browser redirect/callback alone and do not auto-start conversion.
 - On success, restore the existing conversion context, refresh the wallet, and require an explicit **Konversi PDF** click. Never auto-start paid processing from payment callback.
 - QRIS remains an option to evaluate, not an active integration until tested.
 
@@ -100,7 +101,7 @@ Job state is distinct from billing state. User-visible status is mapped from a s
 - `reconciliation_required`: no new charge/credit is applied until ambiguous financial state is resolved.
 
 Operational contract:
-- Only transient provider/transport errors retry, with a small configured attempt limit; invalid files, schema errors, auth errors and permanent rejection do not retry.
+- Only transient provider/transport errors retry, with a small configured attempt limit; invalid files, schema errors, auth errors and permanent rejection do not retry. For a Reducto timeout, inspect the saved provider job/request ID and check existing provider job status before creating a retry; never blindly duplicate a request that may still be running.
 - After the retry limit, mark the job failed with a safe error, release reservation, and retain the error reference for support. A durable queue/DLQ may be used if required by chosen deployment, not a second job-management system.
 - A user may cancel before processing starts; atomically mark canceled and release reservation. Once an external provider call is in flight, cancellation is best effort: prevent new attempts and settle zero/release only after the worker can prove no valid artifact was produced. Never release a hold while an active worker could still commit a charge without a guarded state transition.
 - For a job stalled past its configured maximum runtime, a recovery worker/maintenance task atomically claims it, verifies no artifact or active lease exists, marks it expired/failed, and releases the hold once.
@@ -134,6 +135,10 @@ History, detailed transaction ledger and account settings remain secondary desti
 11. Two simultaneous jobs: reservations cannot overspend one wallet.
 12. Desktop/mobile normal path remains upload → process → download; no forced dashboard or full-table review.
 13. No provider, payment method, queue or hosting capability is shown as live before implementation/verification.
+14. Database job/reservation commits but optional queue dispatch fails: the committed job is recoverable and eventually dispatched without creating a duplicate job/reservation.
+15. Provider timeout: the existing provider job/request is checked before any safe retry; provider-attempt cost/usage is recorded.
+16. Corrected export: same job, new immutable artifact version, no second customer charge; post-settlement amount correction uses a compensating ledger entry.
+17. Provider verifies a payment after local order expiry: reconciliation required until exactly-once credit or explicit refund/reversal is resolved.
 
 ## 9. Relationship to the other documents
 
