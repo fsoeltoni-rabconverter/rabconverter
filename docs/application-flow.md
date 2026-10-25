@@ -1,149 +1,148 @@
 # Application Flow Specification — RabConverter
 
-Status: target product behavior for the MVP; not proof of an implemented application.
-UX benchmark: remove.bg, used only for interaction simplicity—not its technology, brand assets, or business model.
-Commercial and provider rules remain governed by [pricing-and-billing.md](pricing-and-billing.md) and [processing-pipeline.md](processing-pipeline.md).
+Status: source of truth for target MVP user experience and user-visible job/payment transitions; this is not proof of implementation.
+UX benchmark: remove.bg interaction simplicity only—one main upload action, automatic work, a clear result, and easy download. Do not copy its technology, brand assets, or business model.
+Pricing/billability rules are owned exclusively by [pricing-and-billing.md](pricing-and-billing.md); technical pipeline by [processing-pipeline.md](processing-pipeline.md); workbook rules by [export-specification.md](export-specification.md).
 
-## 1. Product experience in one sentence
+## 1. Product loop
 
-**Upload a RAB/BOQ PDF, let RabConverter do the work, then download an editable Excel workbook.**
+**Unggah PDF RAB/BOQ → sistem mengerjakan konversi → unduh XLSX.**
 
-The user should not need to learn extraction, mapping, formula reconstruction, provider, wallet-ledger, or settlement terminology. Those are application responsibilities. The interface exposes only the information and choices needed to start safely, understand an exception, and obtain the result.
+The user should not need to understand extraction, row mapping, formula reconstruction, queue, wallet ledger or settlement. Those are system responsibilities. The interface displays the cost ceiling, actual state, result and any decision genuinely needed to make the result safe.
 
-## 2. UX rules that are requirements
+## 2. Non-negotiable UX contract
 
-1. **One primary action:** the initial screen is centered on uploading a PDF. Do not make a dashboard, feature tour, or configuration form a prerequisite for the first conversion.
-2. **One continuous conversion journey:** upload, price confirmation, processing, and result should live in one clear flow. Use inline panels or a focused dialog when practical; do not create a wizard step for every backend stage.
-3. **Automate the normal path:** after the user confirms the displayed cost ceiling and starts conversion, the system validates, extracts, maps, reconstructs safe formulas, checks the workbook, assesses billable pages, and settles automatically.
-4. **Interrupt only for a real reason:** ask the user to act only for an unsupported file, insufficient balance, an important ambiguity that cannot be represented safely, or another issue that blocks a usable deliverable. Do not force a full-table review on every successful conversion.
-5. **Result first:** once a valid workbook is ready, make **Download Excel (.xlsx)** the dominant action. Warnings and advanced details remain visible but secondary; do not hide a ready file behind a mandatory tour or dashboard.
-6. **No silent invention:** preserve printed source values. Never invent rates, quantities, taxes, overhead, profit, or formula logic. An uncertainty that can be preserved safely should become a targeted warning, not a fabricated answer.
-7. **Clear price before paid work:** show page count, price, estimated maximum, wallet balance, and any shortfall before provider processing begins. The user explicitly starts paid processing. Do not surprise-charge.
-8. **Truthful status:** progress labels reflect real backend states. Never fake percentages, imply that a stage is finished early, or promise a specific processing time that the system cannot support.
-9. **Recover without starting over:** a payment or recoverable processing issue should return the user to the relevant state with the file/job context retained where safely possible.
-10. **Mobile is a first-class path:** upload, start, status, warning summary, and download work on a narrow screen without requiring a desktop-only table interaction.
-11. **No false live claims:** QRIS, a payment gateway, background workers, provider execution, and downloadable files are not presented as available until implemented and verified.
+1. One primary action on the first screen: upload a PDF.
+2. Preflight and price estimate stay in the same conversion journey; do not create a page for each backend stage.
+3. No dashboard, feature tour or full-document review is required before the first usable download.
+4. Paid processing starts only after the server confirms an authenticated user, explicit conversion intent and an atomic reservation.
+5. Normal-case conversion automatically proceeds through extraction, validation, XLSX generation, billable-page assessment and settlement.
+6. Review is exception-driven: preserve uncertainty safely and warn; ask a targeted question only when a material decision is necessary.
+7. A valid XLSX is result-first. Show “Download Excel (.xlsx)” as the dominant action.
+8. Never make up data, formula rules, status, progress percentages, costs or payment success.
+9. A job can be left, retried or recovered without creating duplicate charges/credits. Durable work may continue after navigation only once implemented and verified.
+10. Do not add components or dependencies just to mirror each conceptual stage. Prefer one job record, one wallet/ledger contract, one queue if a durable async queue is required, and simple inline UI states.
 
 ## 3. Main conversion flow
 
 ```mermaid
 flowchart TD
-    A["Home: upload PDF RAB/BOQ"] --> B["Preflight: validate file and count pages"]
-    B --> C{"Supported and readable?"}
-    C -- "No" --> X["Explain the issue and next action"]
+    A["Home: upload PDF"] --> B["Preflight: validate type, readability, configured limits and page count"]
+    B --> C{"PDF supported?"}
+    C -- "No" --> X["Explain issue; no reservation or charge"]
     X --> A
-    C -- "Yes" --> D["Show page count, maximum estimate, price and balance"]
-    D --> E{"Balance covers the reservation?"}
-    E -- "No" --> F["Create top-up order (minimum Rp50.000)"]
-    F --> G{"Payment verified by server?"}
-    G -- "Pending" --> H["Show pending status; do not start processing"]
-    H --> G
-    G -- "Failed / canceled / expired" --> I["Show status and recovery options"]
-    I --> F
-    G -- "Paid" --> D
-    E -- "Yes" --> J["User selects Konversi"]
-    J --> K["Reserve balance and create idempotent job"]
-    K --> L["Extract, map, reconstruct safe formulas and validate"]
-    L --> M["Generate and verify XLSX"]
-    M --> N{"Usable downloadable workbook exists?"}
-    N -- "No" --> O["Charge Rp0; release reservation; explain failure"]
-    O --> A
-    N -- "Yes" --> P["Assess billable pages and settle once"]
-    P --> Q["Result: Download Excel (.xlsx)"]
-    Q --> R["Show charge, remaining balance and any warnings"]
+    C -- "Yes" --> D{"Signed-in user?"}
+    D -- "No" --> L["Sign in / create account, retain file context safely"]
+    L --> D
+    D -- "Yes" --> E["Show count, Rp2.500/page, max estimate, wallet balance"]
+    E --> F{"Balance covers max reservation?"}
+    F -- "No" --> G["Create one top-up order ≥ Rp50.000"]
+    G --> H{"Verified payment and wallet credit applied?"}
+    H -- "Pending / ambiguous" --> I["Show pending; no conversion starts"]
+    I --> H
+    H -- "Failed / expired / canceled" --> J["Explain state; retry or exit"]
+    J --> G
+    H -- "Credited" --> E
+    F -- "Yes" --> K["User selects Konversi PDF"]
+    K --> M["Atomically reserve max amount and create one job"]
+    M --> N["Process, validate rows/formulas and generate XLSX"]
+    N --> O{"Verified usable XLSX exists?"}
+    O -- "No" --> P["Settle zero; release reservation; show recovery"]
+    P --> A
+    O -- "Yes" --> Q["Assess substantive exported pages and settle once"]
+    Q --> R["Download Excel + compact receipt/warnings"]
 ```
 
-### Normal path, step by step
+## 4. Main path rules
 
-1. The home screen offers one prominent upload action: drag and drop or choose a PDF. It states the supported input and the per-page price without overwhelming the user with the complete billing policy.
-2. Preflight validates file type, readability, encryption, configured size/page limits, and source page count. Unsupported or invalid documents receive a plain-language explanation and a useful recovery action.
-3. Before any paid provider processing, show a compact cost panel: source page count, Rp2.500/page, estimated maximum charge, available balance, and required top-up if the balance is insufficient. Explain that final charge depends on qualifying pages retained in the successful workbook.
-4. When balance is sufficient, the user explicitly selects **Konversi PDF**. The server checks the balance and creates the reservation/job atomically and idempotently. The browser is not authoritative for balance or price.
-5. The interface stays on the conversion journey and shows meaningful stages: validating → reading pages → extracting tables → mapping RAB rows → reconstructing safe formulas → checking totals → preparing Excel. Show only real stages and honest retry states.
-6. The server verifies that the XLSX can be opened and meets the workbook contract, then assesses billable source pages from records actually retained in the export.
-7. If a downloadable workbook exists, the server performs one idempotent settlement, releases the unused reservation, and presents the result. If no usable deliverable exists, the charge is Rp0 and the reservation is released.
-8. The result screen leads with **Download Excel (.xlsx)**. It also shows billable pages × Rp2.500, actual charge, remaining balance, job/receipt reference, and any relevant warnings. Warnings must not obscure or disable a usable download without a specific correctness reason.
+### Home and preflight
+- Offer drag/drop and browse with PDF RAB/BOQ scope, concise privacy notice, and price cue.
+- Validate MIME/file signature, readability, encryption/corruption and configured byte/page limits before any paid provider call.
+- Preflight may run before login, but customer-owned source files must be kept only in an explicitly temporary, private context. The simplest default is to request sign-in before storing a durable job or retaining the file in server storage.
+- After a user signs in, confirm the temporary upload can be safely associated with that identity; otherwise ask them to reselect the file. Never expose temporary uploads through public URLs.
 
-## 4. Review is exception-driven, not a mandatory step
+### Estimate and explicit start
+- Show source page count, Rp2.500/page, estimated maximum, available wallet balance, and exact shortfall.
+- Maximum = all accepted source pages × price; it is a reservation ceiling, not a promise of final billing.
+- Top-up minimum Rp50.000 is a minimum transaction, never a minimum job charge.
+- Do not call Reducto before server-side auth, explicit **Konversi PDF** intent and successful atomic reservation.
+- A repeated submit for the same intent returns the same job/result and does not create a second job charge.
 
-The target experience must not require every customer to inspect every extracted row before receiving a workbook.
+### Automatic conversion
+- Show only real states: checking PDF → reading pages → extracting tables → organizing RAB rows → checking formulas/totals → preparing Excel.
+- These are labels for real backend milestones, not a simulated percentage timer.
+- After output verification, deterministically assess billable pages from records in the export manifest, calculate one charge against the job's price snapshot, and release remaining reservation atomically.
+- If no valid downloadable XLSX exists, charge Rp0 and release the full reservation. A warning is not itself a reason to call a page non-billable.
 
-- **No material uncertainty:** generate and offer the workbook directly.
-- **Uncertainty that can be preserved safely:** keep the printed value, leave speculative formulas out, mark the affected cell/row, and include a specific warning with source-page provenance. The workbook can still be offered when it meets the export contract.
-- **High-impact ambiguity that truly blocks a safe result:** ask one focused, contextual question about the affected field or mapping. Explain what decision is needed and provide safe choices such as keeping the printed value or leaving the formula unresolved. Do not silently assume a tax, overhead, rate, or formula rule.
-- **Partial extraction:** offer a partial workbook only when the product can clearly describe its limitations and the artifact meets the approved export contract. Bill only qualifying pages represented in that artifact.
-- **No usable RAB/BOQ records or failed export:** do not present the job as a successful conversion. Explain why there is no download; charge Rp0 and release the reservation.
+### Review only when necessary
+- No material ambiguity: continue automatically to export.
+- Ambiguity that can safely remain unresolved: preserve source values, leave unsubstantiated formulas absent, add a source-linked warning, and offer the workbook if the export contract is met.
+- Only block on a focused user choice when the uncertainty prevents an honest usable workbook. Do not invent tax, overhead, profit, rates, quantity, or formula membership.
+- Correcting data before the first export does not create another job. Regeneration after an export creates a new immutable artifact version in the same job; it must not create a second job charge. Settlement may be adjusted only through a documented compensating ledger entry if the final billable assessment changes due to a confirmed correction.
 
-A warning by itself does not make a page non-billable. Billability is determined by the source-page contribution rules in [pricing-and-billing.md](pricing-and-billing.md), not by a warning count or provider usage.
+## 5. Payment and top-up transitions
 
-## 5. Top-up flow
+- State machine: `created → pending → paid → credited`; terminal alternatives are `failed`, `canceled`, `expired`, and `reconciliation_required`. Exact provider state maps to these application states.
+- `paid` means the provider event is verified. `credited` means the corresponding wallet-ledger credit has committed exactly once. Only `credited` unlocks the wallet-funded conversion.
+- Webhook may be repeated or arrive before/after a browser redirect. Verify signature/authenticity and amount/currency/order reference; persist provider event ID uniquely; apply state and credit transactionally/idempotently. A redirect is UI navigation only.
+- For pending or ambiguous provider state, retain the order, show current status and wait/check status without creating duplicate orders automatically.
+- On success, restore the existing conversion context, refresh the wallet, and require an explicit **Konversi PDF** click. Never auto-start paid processing from payment callback.
+- QRIS remains an option to evaluate, not an active integration until tested.
 
-Top-up is a recovery branch of the same conversion journey, not a separate funnel that makes the user upload the PDF again.
+## 6. Job state, cancellation and reservation recovery
 
-1. Create an order for an amount of at least Rp50.000.
-2. Display the order amount, order reference, payment instructions from the selected provider, and persisted status.
-3. Treat the order as pending until a server-verified payment event confirms settlement. Browser redirects or screenshots alone never credit the wallet.
-4. For pending payments, show that processing has not started and provide a way to refresh/check status. Do not create repeated orders or claim a successful credit from a redirect parameter.
-5. On verified success, credit the wallet once, return to the retained conversion context, refresh the estimate/balance, and let the user press **Konversi PDF** to start. Do not silently begin paid processing after payment.
-6. For failed, canceled, or expired orders, explain the status and let the user retry or leave. An ambiguous provider state is marked as needing reconciliation, not falsely marked paid.
-7. QRIS is a preferred method to evaluate, not a live option until the provider integration is built and tested.
+Job state is distinct from billing state. User-visible status is mapped from a small durable state model:
+- `uploaded` / `preflight_complete`: no paid processing or reservation yet;
+- `queued` / `processing`: one durable job, reserved balance, idempotent worker attempts;
+- `review_required`: a specific user decision blocks safe output; reservation expiry is active and visible;
+- `completed` / `completed_with_warnings`: verified immutable XLSX available; final page assessment and charge recorded once;
+- `failed` / `canceled` / `expired`: if no downloadable artifact exists, zero charge and reservation released;
+- `reconciliation_required`: no new charge/credit is applied until ambiguous financial state is resolved.
 
-## 6. User-visible state model
+Operational contract:
+- Only transient provider/transport errors retry, with a small configured attempt limit; invalid files, schema errors, auth errors and permanent rejection do not retry.
+- After the retry limit, mark the job failed with a safe error, release reservation, and retain the error reference for support. A durable queue/DLQ may be used if required by chosen deployment, not a second job-management system.
+- A user may cancel before processing starts; atomically mark canceled and release reservation. Once an external provider call is in flight, cancellation is best effort: prevent new attempts and settle zero/release only after the worker can prove no valid artifact was produced. Never release a hold while an active worker could still commit a charge without a guarded state transition.
+- For a job stalled past its configured maximum runtime, a recovery worker/maintenance task atomically claims it, verifies no artifact or active lease exists, marks it expired/failed, and releases the hold once.
+- A review-required hold has a bounded expiry (set the exact duration as a launch config); notify the user in the UI that the job will expire. Expiry finalizes only if no usable artifact is available. A late worker cannot settle a terminal/expired job.
+- Queue delivery is at-least-once; every worker must check persisted job state and idempotency key before external calls, artifact writes and settlement. The database/job state remains the source of truth.
 
-These are user-facing semantic states. Backend enum names may differ, but each state must map to a clear label and action.
+## 7. Small screen/state inventory
 
-| State | What the user sees | Required behavior |
-|---|---|---|
-| Ready to upload | One main upload action and concise price cue | No prerequisite dashboard |
-| File checking | Validation and page count being determined | No paid processing yet |
-| File rejected | Plain-language reason and corrective action | No charge |
-| Estimate ready | Pages, maximum estimate, balance, and explicit start action | Do not start provider until confirmed |
-| Balance insufficient | Exact shortfall and top-up action | Do not process or reserve beyond policy |
-| Payment pending | Persisted pending status | Do not credit or process |
-| Payment confirmed | Updated balance and return to conversion | User explicitly starts conversion |
-| Processing | Real processing stage/status | Bounded visible retries; prevent duplicate jobs |
-| Needs user input | One specific ambiguity and source context | Do not invent a value |
-| Completed with warnings | Download available plus concise warning summary | Warning does not automatically block a usable artifact |
-| Completed | Download action, final charge and balance | One charge per job |
-| No usable result | Clear reason and retry/re-upload action | Rp0 charge; reservation released |
-| Processing/export failed | Safe error and recovery path | If no artifact exists: Rp0 charge; reservation released |
-| Settlement/reconciliation issue | Clear non-success payment state and reference | Never claim a false charge or top-up success |
+Use one conversion screen with inline state panels, plus focused auth/payment/review dialogs only when needed:
+- upload/preflight error;
+- estimate + balance;
+- processing/status;
+- focused review question;
+- result/download + receipt + warning summary;
+- top-up status/recovery.
 
-## 7. Screen and component boundary
-
-The smallest useful first-release experience is:
-
-- **Conversion home:** upload area, one-sentence promise, PDF-only scope, price cue, and a quiet route to balance/history/account details where applicable.
-- **Estimate panel:** page count, maximum charge, current balance, shortfall or reservation information, and the single start/top-up action.
-- **Processing state:** one real status line plus stage details that can be expanded when helpful; no dashboard widgets or fake progress.
-- **Result state:** dominant download action, concise billing receipt, remaining balance, and warnings that matter.
-- **Focused exception panel:** appears only when a concrete user decision is needed.
-- **Top-up status panel:** order details and persisted payment status; returns to the same conversion context.
-
-History, deep audit details, full-row browsing, transaction ledgers, and account settings may exist as secondary destinations. They must not compete with the first conversion action.
+History, detailed transaction ledger and account settings remain secondary destinations. Full-document tables can expand for a user who wants detail, but are not required for a normal conversion.
 
 ## 8. Acceptance scenarios
 
-The UX and implementation are not accepted until these scenarios are covered by deterministic tests and manual desktop/mobile inspection:
+1. Supported file + sufficient wallet: one continuous journey, verified XLSX and one matching charge.
+2. Auth required: preflight can run without login; no durable owner-scoped file/job or paid provider call before authentication.
+3. Insufficient wallet: no provider usage before funds cover the reservation; after verified wallet credit, return to the same file context and require explicit start.
+4. Page with section heading only, header/footer only or notes only: non-billable; actual RAB item row and substantive recap record retained in XLSX: billable.
+5. Review-required job times out: one terminal transition and reservation release; late worker cannot charge or credit.
+6. Provider transient failure: bounded retry and same job/idempotency key; no artifact → zero charge.
+7. Partial but valid XLSX: clearly disclose limitations; only substantive retained source pages are billable.
+8. Export failure or workbook formula error: do not offer success; no charge if there is no verified downloadable XLSX.
+9. Repeated/out-of-order payment callback: credit occurs once; job only resumes after state is credited.
+10. Corrected/generated artifact version: no duplicate job charge; immutable prior artifact retained.
+11. Two simultaneous jobs: reservations cannot overspend one wallet.
+12. Desktop/mobile normal path remains upload → process → download; no forced dashboard or full-table review.
+13. No provider, payment method, queue or hosting capability is shown as live before implementation/verification.
 
-1. **Successful common case:** a supported PDF with sufficient balance reaches a valid XLSX through one continuous flow; the download is prominent and the displayed charge matches the ledger.
-2. **Insufficient balance:** no extraction provider is called before funds are sufficient; the top-up order is verified server-side; after payment the user returns to the same conversion and explicitly starts it.
-3. **Invalid or unsupported input:** the reason and next action are clear; no customer charge occurs.
-4. **Recoverable provider failure:** bounded retries are visible and idempotent; a job with no downloadable artifact is charged Rp0 and the reservation is released.
-5. **Useful partial output:** a valid completed-with-warnings workbook can be downloaded; warnings are specific; only qualifying exported pages are charged.
-6. **Formula uncertainty:** printed values are preserved; unsupported formula assumptions are not invented; the user is not forced through a full-document review if an honest workbook can be safely generated.
-7. **Export failure:** no download is offered, no customer page charge is taken, and the reservation is released.
-8. **Duplicate requests/callbacks:** processing, top-up credits, and charges are not duplicated.
-9. **Mobile conversion:** upload, cost confirmation, live state, result, warnings, and download remain usable at narrow viewport widths.
-10. **Truthful product status:** no provider, payment option, or infrastructure is shown as operational before it has been implemented and verified.
+## 9. Relationship to the other documents
 
-## 9. Relationship to other specifications
+- [product-definition.md](product-definition.md): promise, scope and formula boundaries.
+- [pricing-and-billing.md](pricing-and-billing.md): price, billable pages, wallet, top-up, settlement and reversal.
+- [processing-pipeline.md](processing-pipeline.md): extraction, validation, retries and artifact generation.
+- [canonical-data-model.md](canonical-data-model.md): job/payment state and persistence.
+- [user-experience.md](user-experience.md): screen layout, components and accessibility.
+- [export-specification.md](export-specification.md): XLSX structure, recalculation and verification.
+- [acceptance-criteria.md](acceptance-criteria.md): testable gates.
 
-- [product-definition.md](product-definition.md) owns the product promise and scope.
-- [pricing-and-billing.md](pricing-and-billing.md) owns the price, billable-page definition, reservations, top-up lifecycle, charge, reversal, and COGS.
-- [processing-pipeline.md](processing-pipeline.md) owns backend stages, provider behavior, validation, retry and artifact generation.
-- [user-experience.md](user-experience.md) owns screen-level interaction, visual hierarchy, accessibility and UI details.
-- [export-specification.md](export-specification.md) owns the XLSX contract.
-- [acceptance-criteria.md](acceptance-criteria.md) owns the testable product and engineering gates.
-
-If implementation choices conflict with the simplicity rules here, simplify the interaction—not the underlying billing integrity, output correctness, or honest handling of uncertain source data.
+When two requirements conflict, simplify the UI—not financial integrity, provenance or honesty about source ambiguity.
