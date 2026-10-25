@@ -45,7 +45,7 @@ PDF umumnya menyimpan hasil perhitungan yang tercetak, bukan formula dan referen
 
 ## Dokumentasi acuan
 
-Mulai dari [docs/README.md](docs/README.md). [Application flow](docs/application-flow.md) mengatur perilaku end-to-end; [pricing and billing](docs/pricing-and-billing.md) menjadi satu-satunya sumber kebenaran untuk harga, billability, wallet, top-up, charge, reversal dan COGS.
+Mulai dari [docs/README.md](docs/README.md). [Application flow](docs/application-flow.md) mengatur perilaku end-to-end; [pricing and billing](docs/pricing-and-billing.md) menjadi satu-satunya sumber kebenaran untuk harga, billability, wallet, top-up, charge, reversal dan COGS. Rencana delivery ada di [Implementation plan](docs/implementation-plan.md), sedangkan status dan issue kerja ada di [Implementation tracker](docs/implementation-tracker.md).
 
 ## Infrastruktur saat ini
 
