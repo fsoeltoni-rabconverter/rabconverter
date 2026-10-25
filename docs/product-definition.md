@@ -1,59 +1,87 @@
 # Product Definition
 
-Status: Draft for review  
+Status: Draft v2 — grounded in public-market and workflow research  
 Product: RabConverter
 
 ## One-sentence promise
 
-Turn a contractor's received tender documents into reviewable, traceable RAB/BOQ spreadsheet data without manually retyping every line.
+Upload a PDF RAB and download an editable Excel workbook whose extracted values are traceable to the PDF and whose reconstructed calculations use working Excel formulas where the source structure supports them.
 
 ## Target user
 
-Indonesian small and mid-sized contractors, specialist subcontractors, estimators and administrative staff who receive tender packages from owners, consultants, general contractors or procurement portals. The first use case assumes a contractor already has source documents and needs to prepare or adapt a spreadsheet, not necessarily measure a building from drawings.
+Indonesian small and mid-sized contractors, builders, specialist subcontractors, estimators and administrative staff who receive a PDF RAB/BOQ from a client, quantity surveyor, consultant or another contractor, then need to reuse the data in Excel for reviewing, modifying, repricing or preparing a tender/quotation.
 
-## Primary job to be done
+## Core job to be done
 
-“When a project offer arrives, help me reuse the information already present in the client's documents so I can prepare my own priced RAB/BOQ and supporting spreadsheet with less clerical work and fewer transcription mistakes.”
+“When I receive a RAB/BOQ as PDF, I do not want to manually type every row into Excel. I want an editable workbook with the line items, units, quantities, prices, subtotals and totals in the right columns, and I want the arithmetic to work when I change a quantity or rate.”
 
-## Success outcome
+## Product outcome
 
-A user can upload a source file, quickly review its extracted line items, correct only exceptions, and download a usable workbook with source order and section structure preserved.
+The user uploads a PDF, gets a preview and extraction status, reviews fields that are uncertain, and downloads an XLSX with:
+- editable cells (not images embedded in a sheet);
+- working, inspectable formulas for reconstructed calculations;
+- section/subtotal structure preserved when detected;
+- original extracted values distinguished from formula-derived values;
+- source page/row provenance and a clear warning sheet when issues remain.
+
+## Important honesty boundary: formula reconstruction
+
+A PDF generally preserves the displayed output of a calculation, not the original Excel formula or references. Therefore, RabConverter cannot claim to recover the exact original formula from a PDF unless formula logic is separately present in the document.
+
+The product will reconstruct common formulas, not falsely claim recovery:
+- line amount = quantity × unit price, where the columns and semantics are confidently identified;
+- subtotal = sum of the appropriate line amounts within a section, where section boundaries are clear;
+- grand total = sum of accepted section subtotals or included amounts;
+- optional tax/overhead/profit formulas only when the applicable base, rates and inclusion logic are identifiable and explicitly approved.
+
+Every generated formula must be labelled as reconstructed/generated. Printed PDF amounts remain source evidence; they are compared with calculated results. Where formula logic is ambiguous, output the extracted value, flag the issue, and leave the ambiguous formula blank or require user confirmation.
 
 ## Product principles
 
-- **Upload first:** the central experience starts with files, not a complex project-management dashboard.
-- **No silent invention:** unknown quantities, units, rates, codes or rules stay unknown until confirmed.
-- **Review before trust:** show extracted candidate data and flag low-confidence content.
-- **Preserve source:** original files remain immutable; every normalized row has provenance.
-- **Spreadsheet-compatible:** Excel is a first-class deliverable because users and clients exchange working templates.
-- **Template-aware:** preserve a client's format where feasible; do not assume every tender uses one universal layout.
-- **Cloud-only development and operation:** GitHub is the code source, GitHub Actions validates/builds, Cloudflare hosts previews and the web app, and Supabase supplies relevant data/storage services.
-- **User control:** make processing state, failures, retry, retention and deletion understandable.
+- **PDF-first wedge:** first optimize conversion of a supplied PDF RAB/BOQ to a formula-bearing XLSX.
+- **No silent invention:** unknown quantities, units, prices, formulas or rules remain unresolved rather than guessed.
+- **Editable, not just pretty:** a valid export has real cell values and formulas, not an image or values-only dump.
+- **Review before trust:** highlight uncertain OCR, column mapping, number formats and arithmetic mismatches.
+- **Traceable numbers:** every extracted row and important field refers back to source page/region when available.
+- **Preserve order and hierarchy:** do not flatten sections, notes, subtotals or totals into indistinguishable work items.
+- **Fast, simple UX:** one primary upload action, clear progress, review only where needed, then download.
+- **Cloud-only:** GitHub source of truth, GitHub Actions for checks/deployment, Cloudflare for web/preview, Supabase for user/job metadata and private storage where appropriate.
+- **No overclaiming:** no promises of perfect OCR or authoritative RAB validation.
 
 ## MVP scope
 
-1. File upload and job creation.
-2. Supported file detection and validation.
-3. Parsing of common BOQ/RAB tables and project details from selected supported formats.
-4. Editable extraction review table.
-5. Numeric and structural reconciliation warnings.
-6. XLSX and CSV export.
-7. Job history for the signed-in user's own uploads.
-8. Clear errors when a source cannot be parsed safely.
+1. Upload a PDF RAB/BOQ.
+2. Detect whether PDF is text-based, scanned, mixed or unsupported.
+3. Extract tables with rows/columns, page references, text confidence and likely row type (section, item, note, subtotal, total).
+4. Map common RAB columns such as item/code, description, unit, quantity/volume, unit price, amount.
+5. Reconstruct and label safe, common formulas.
+6. Compare formula results with printed amounts and section/grand totals.
+7. Provide inline review/edit for uncertain fields and formula mapping.
+8. Export XLSX with formula-bearing item rows, sections, recap and exceptions/warning sheet.
+9. Offer a values-only or CSV export only as a secondary option, clearly distinguished from formula-bearing XLSX.
+10. Explain failure and allow safe retry without losing review edits.
 
 ## Non-goals for MVP
 
-- Automated takeoff measurements from drawings as a substitute for quantity surveying.
-- A promise to interpret all scanned/handwritten/poor-quality pages.
-- Automatic or authoritative market pricing.
-- A universal AHSP/AHS engine across all years, regions and project types.
-- Tender submission, digital signing or guaranteed procurement compliance.
-- Full accounting, procurement, scheduling, project management or cost control.
+- Exact recovery of original Excel formulas, hidden sheets, named ranges, macros or reference graph from a PDF alone.
+- Generating a technically correct quantity takeoff from architectural/structural drawings.
+- Authoritative AHSP/AHS matching or automatic market pricing.
+- Assuming a fixed tax rate, overhead, profit, contingency or rounding rule for every RAB.
+- Guaranteed acceptance by a procurement portal or exact reproduction of every agency template.
+- Tender submission, signing, full procurement, scheduling or project management.
 
-## Product boundary and language
+## Competitive positioning
 
-The application extracts and organizes evidence. It is not the authority for the bid. The contractor checks quantities, units, rates, formulas, exclusions, contract terms and final submission.
+General PDF-to-Excel converters already offer editable spreadsheet conversion. RabConverter should differentiate around the RAB-specific layer: Indonesian construction column understanding, row hierarchy, formula reconstruction, comparison against printed totals, safe ambiguity handling and an export a contractor can continue editing.
 
-## How we will know it works
+## Success measures
 
-Measure: successful imports by format; proportion of line items accepted without correction; correction types; exports that reopen as valid spreadsheets; duplicate/missing-row detection; processing failures; and time to first reviewed export. Do not claim a percentage productivity gain until measured in representative use.
+- Field-level exactness of description, unit, quantity, rate and printed amount on golden PDFs.
+- Correct distinction between item rows, section headers, notes and subtotal/total rows.
+- Percentage of eligible line amounts with valid formulas and correct calculation results.
+- Count and magnitude of formula-vs-printed-total mismatches caught.
+- XLSX opens without corruption; formulas recalculate correctly in tested spreadsheet apps.
+- Time to reviewed download and percent of rows corrected by users.
+- Parser/OCR cost and processing time by pages/document class.
+
+Do not claim productivity savings or accuracy percentages until measured on a representative sample.
