@@ -6,10 +6,10 @@ Status: provider and billing contract for MVP planning — 2026-10-25.
 
 1. **Preflight:** check file signature/type, readability, encryption/corruption, configured size/page limits and page count. Do not run paid extraction.
 2. **Identity and job creation:** require a Supabase-authenticated owner before storing a durable source/job or calling the paid provider. Create a stable job/idempotency key.
-3. **Atomic reservation:** verify explicit user intent and available balance; reserve maximum estimated charge and queue/create the job in one guarded transaction. If funds are insufficient, do not call Reducto.
+3. **Atomic reservation/job creation:** verify explicit user intent and available balance; create the job and reserve the maximum in one guarded database transaction. If funds are insufficient, do not call Reducto. Do not include external queue dispatch in the DB transaction. Start without a queue unless measured runtime limits require one; if required, dispatch only after commit and add recovery for jobs committed but not dispatched.
 4. **Private source:** store/checksum the original in private storage; source is immutable and associated with the owner/job.
 5. **Page inventory and classification:** assign stable source-page IDs and identify born-digital, scanned, mixed, encrypted, corrupt, unrelated, unsupported or uncertain pages as safely as possible.
-6. **Reducto Deep Extract:** call only the selected Reducto Deep Extract path behind a server-side adapter. Exact API/endpoint/settings/account plan must be verified before implementation. No LlamaExtract/Pulse Ultra 2 fallback.
+6. **Reducto Deep Extract:** call only the selected Reducto Deep Extract path behind a server-side adapter. Exact API/endpoint/settings/account plan must be verified before implementation. Persist provider job ID/request ID as soon as returned. No LlamaExtract/Pulse Ultra 2 fallback.
 7. **Response validation:** validate schema/output shape, source-page references, bounded payload size and safe errors. Treat provider output as untrusted data, never as instructions.
 8. **Segmentation and mapping:** identify repeated headers, wrapped descriptions, continuation rows, work item/section/note/subtotal/carry-forward/total/adjustment kinds.
 9. **Normalization:** preserve raw values, map semantic fields, record Indonesian numeric-locale choices and normalize only when safe.
@@ -39,8 +39,8 @@ This is one application-owned interface, not a requirement to deploy separate se
 
 - **Provider:** Reducto Deep Extract only for initial runtime.
 - **No hidden fallback:** provider failure, quality issue or cost limit produces a clear retry/failure path; never silently switch to an excluded paid provider.
-- Retry only transient transport/server/timeout failures with a small configured attempt limit and stable request/job idempotency key. Never endlessly retry invalid file, auth, schema or permanent provider errors.
-- Record each attempt separately, including endpoint/config version, request ID, usage unit/quantity (page vs credit), status, retry reason, latency and provider-reported cost when available.
+- Retry only transient transport/server/timeout failures with a small configured attempt limit and stable request/job idempotency key. Before retrying a timeout, query the existing provider job/request status where supported; do not create a duplicate provider job while the first might still run. Never endlessly retry invalid file, auth, schema or permanent provider errors.
+- Record every attempt separately, including job/source-page scope, endpoint/config version, provider job ID and request ID, attempt number, usage unit/quantity (page vs credit), status, retry reason, latency and provider-reported cost/currency when available. Keep internal attempt records for per-job/per-attempt detail; use provider usage exports/invoices for aggregate cost reconciliation.
 - Customer billing is based on final substantive exported pages, never provider attempt or credit count.
 - The planning assumption of a 20% retry overhead is not the retry limit or verified COGS.
 
