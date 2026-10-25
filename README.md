@@ -26,7 +26,7 @@ PDF umumnya menyimpan hasil perhitungan yang tercetak, bukan formula dan referen
 - Halaman kosong, cover saja, halaman tidak relevan, atau halaman gagal/tidak menghasilkan data RAB/BOQ yang dapat digunakan tidak ditagih.
 - Retry tidak menambah tagihan pengguna. Halaman tidak ditagih bila tidak ada hasil XLSX yang berhasil dibuat untuk pekerjaan tersebut.
 - Definisi lengkap halaman tertagih, saldo, top-up, charge dan reversal ada di [docs/pricing-and-billing.md](docs/pricing-and-billing.md).
-- Harga ini tidak berarti seluruh halaman yang dikirim ke provider selalu dapat ditagih. Biaya provider untuk halaman yang akhirnya tidak tertagih merupakan risiko biaya RabConverter dan harus dimeter terpisah.
+- Harga ini tidak berarti seluruh halaman yang dikirim ke provider selalu dapat ditagih. Biaya provider untuk halaman yang akhirnya tidak tertagih merupakan risiko biaya RabConverter dan harus diukur terpisah.
 
 ## Batas teknologi dan ruang lingkup
 
