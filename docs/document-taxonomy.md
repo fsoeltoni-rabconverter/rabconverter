@@ -1,48 +1,68 @@
-# Tender Document Taxonomy
+# RAB Document Taxonomy and Extraction Targets
 
-Status: Draft
+Status: Draft v2 — PDF RAB-first
 
-## Document classes
+## Product-specific document classes
 
-| Class | Examples | Main extraction targets | Typical caution |
+| Class | Examples | Main extraction targets | Caution |
 |---|---|---|---|
-| Opportunity / invitation | Email, tender notice, RFQ, portal export | Project, client, reference, due dates, submission instructions | Email threads contain old dates and quoted replies |
-| BOQ / price schedule | XLSX, XLS, CSV, text PDF | Item code, description, unit, quantity, rates, amount, section totals | Merged cells, repeated headers, formulas and hidden rows |
-| RAB / estimate | XLSX/PDF | Work breakdown, volume, unit rate, amount, recap | May already be priced; formulas and style carry meaning |
-| AHSP/AHS | XLSX/PDF | Work-item analysis, material/labour/equipment resources, coefficients, rates | Context/edition/region matter; don't assume universal rates |
-| Drawings | PDF/images, CAD exports | Sheet number/title/revision, schedules and references | Geometry takeoff requires separate measurement logic |
-| Technical specifications | PDF/DOCX | Materials, work method, standards, approvals, testing and warranty requirements | Interpretation requires professional review |
-| Addendum/clarification | PDF/DOCX/email | Revision ID/date, changed clauses/items, replacement pages | Must link to affected source revision |
-| Supplier/subcontractor quote | PDF/email/XLSX | Vendor, validity, scope, exclusions, rates, tax/delivery | Quote scope often differs; don't compare totals blindly |
-| Bid forms / proposal | DOCX/XLSX/PDF | Bidder identity, price, tax, validity, declaration fields | Exact required format and signatures are client-specific |
-| Qualification documents | Company archive and tender forms | Company profile, licenses, tax, experience, insurance/bonds | Sensitive business data; only process when needed |
-| Internal RAP / procurement schedules | XLSX/PDF | Cost baseline, procurement, labour/equipment needs | Downstream internal budget is not the same as submitted BOQ/RAB |
+| PDF RAB | Contractor estimate, residential/commercial work breakdown | Code, description, unit, quantity, rate, amount, section and recap | Formula graph usually absent from PDF |
+| PDF BOQ / Daftar Kuantitas dan Harga | Unpriced or priced tender schedule | Item code, description, unit, quantity, rate/amount when present | Blank rates must remain blank; client templates vary |
+| PDF rekapitulasi RAB | Work-group summary and final total | Section subtotals, total, tax/overhead fields and printed labels | Row inclusion and tax order vary |
+| PDF AHSP/AHS | Unit-price analysis | Work item, resource, unit, coefficient, base resource price and calculated unit price | Version, sector, region and standard matter |
+| Supporting tender documents | Invitation, specifications, addenda, drawings | Project metadata, dates, reference and context | Full semantic interpretation not MVP |
+| Spreadsheet source (XLS/XLSX) | Original workbook if also supplied | Native formulas, sheets, cell formats, hidden rows/sheets and formula caches | Treat native workbook as more authoritative for formula structure than a PDF printout |
+| Scanned/image PDF | Photocopy, scan, phone scan | OCR text plus cell layout candidates | Higher numeric uncertainty; require review |
+| PDF with drawn table lines/flattened spreadsheet | A spreadsheet printed to PDF | Cell/column geometry and row types | Visual grid is not a recovered workbook model |
 
-## Hierarchy of parsing strategies
+## Native PDF vs scan
 
-1. Native workbook structure: preserve sheets, rows, formulas, merged cells, hidden rows/columns, named ranges and number formats.
-2. CSV/table files: parse delimiters, locale-specific decimals and thousands separators.
-3. Text-based PDF: extract words and table coordinates; maintain page and geometry references.
-4. Scanned PDF/images: OCR plus layout/table interpretation, with stronger confidence warnings.
-5. DOCX/email: parse text, tables and metadata.
-6. CAD or drawing measurement: future, dedicated path. The initial product should register these files and preserve links without claiming measured quantities.
+- Born-digital PDF: try text extraction and word/table geometry first.
+- Scanned PDF: OCR is required and numeric values must carry OCR confidence.
+- Mixed PDF: process page by page and preserve page-level method/warnings.
+- Vector lines/no text order: infer layout from coordinates, not merely reading-order text.
+- Rotated/low-resolution pages: warn or request a better source when safe row extraction is impossible.
 
-## Initial support decision
+## Common Indonesian RAB columns
 
-Do not declare final file support until an implementation is tested against golden files. Proposed initial target: XLSX and text-based PDF BOQ, with CSV as an interchange format. PDF scanned/image-only and XLS are either experimental or limited until verified. Reject unsupported or encrypted files with a useful explanation instead of pretending conversion succeeded.
+Examples include No/Kode, Uraian Pekerjaan, Volume, Satuan, Harga Satuan, Jumlah/Total. These labels vary and may be ordered differently. The parser should map semantic aliases to canonical fields while retaining source header text.
 
-## Confidence and exceptions
+## Row classes
 
-Flag:
-- Missing unit or quantity.
-- Ambiguous number parsing.
-- Formula cell without safely evaluated result.
-- Total row mistaken for a normal item.
-- Similar/duplicate rows without strong evidence.
-- Repeated page headers/footer mixed into rows.
-- Conflicting document revisions.
-- Cells containing multiple distinct values or multiline descriptions.
-- Unknown unit, currency, locale or tax treatment.
-- A subtotal mismatch after normalization.
+Every parsed row should be classified as one of:
+- document/project header;
+- column header;
+- section/group header;
+- work item;
+- continuation of a work-item description;
+- note/assumption;
+- subtotal;
+- carried-forward subtotal;
+- grand total;
+- tax/overhead/profit/contingency adjustment;
+- blank/decoration/page footer;
+- unknown.
 
-Every warning should include a source location and a suggested user action.
+Do not emit every printed line as a regular BOQ item.
+
+## Formula reconstruction rules
+
+PDF values are source evidence; formulas are newly generated logic.
+- Generate amount = quantity × unit price only when both fields and their semantics are confidently mapped.
+- Generate subtotals only when the section boundary and included amount rows are clear.
+- Generate a grand total only when the recap logic is clear.
+- Tax/overhead/profit/contingency formula generation requires explicit recognition of calculation base, rates, order and inclusion/exclusion rules.
+- Reconstructed formulas must be labelled; never claim they are the exact original workbook formulas.
+- Compare calculated values with the printed amount. Record rounding tolerance and mismatches.
+- If ambiguous, preserve the source display value, flag it and leave that formula unresolved until user review.
+
+## Extraction order
+
+1. Validate file and classify born-digital vs scan/mixed.
+2. Extract words, coordinates, pages and table regions.
+3. Detect rows, columns, headers, repeated headers and page continuations.
+4. Normalize local numeric formats with a recorded locale decision.
+5. Classify row type and map semantic columns.
+6. Reconstruct only safe formulas.
+7. Reconcile line amounts, subtotals and totals.
+8. Surface warnings and generate XLSX.
