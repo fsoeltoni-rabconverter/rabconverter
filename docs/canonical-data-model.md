@@ -1,88 +1,79 @@
 # Canonical Data Model
 
-Status: specification draft v3 — 2026-10-25. All fields below are conceptual contract fields, not a claim that database tables already exist. Implement through versioned migrations only after review.
+Status: conceptual specification v4 — 2026-10-25. These are proposed entities/contracts, not deployed database tables. Implement only through reviewed versioned migrations.
 
 ## Model rules
 
-- Keep raw source and normalized interpretation separate.
-- Null is valid for unknown fields; do not invent values.
-- Store quantities and currency values using decimal-safe types; wallet currency uses integer IDR rupiah.
-- Preserve raw locale and parser/provider version.
-- Every row/field retains provenance and review state where possible.
-- Printed PDF values and reconstructed formula/result are separate facts.
-- Customer billable-page assessment and provider usage metering are separate facts.
-- Wallet history is immutable ledger data; cached balance is only a projection.
-- Idempotency is mandatory for job runs, page charges, top-up credits, payment events and reversals.
+- Keep source values and normalized interpretation separate; unknown values are null, never guessed.
+- Use decimal-safe types for quantities/amounts and integer IDR for wallet arithmetic.
+- Preserve locale, provider/pipeline version, page/region provenance and review state where available.
+- Customer billable-page assessment and provider COGS records are separate.
+- Ledger entries are immutable; cached wallet balance is a projection.
+- Job state, financial state and top-up/payment state are separate state machines.
+- Idempotency and uniqueness guards are mandatory for jobs, queue deliveries, artifacts, page assessment versions, wallet mutations and provider events.
 
-## Extraction and RAB entities
+## Entities
 
 ### ProjectJob
-ID, owner user ID, nullable project/client/tender metadata, created/updated timestamps, job status, source page count, price-per-billable-page snapshot IDR, estimated maximum charge IDR, final billable-page count, final charge IDR, billing status and idempotency key.
+ID, owner user ID, creation/update timestamps, nullable optional project metadata, job state, source page count, price snapshot IDR/page, estimated maximum IDR, final billable count/charge IDR, billing state, idempotency key and expiry/worker lease metadata.
 
-Job states may include uploaded, queued, processing, review_required, ready, completed_with_warnings, failed, canceled and deleted. Do not mix job status with billing status.
+Suggested job states:
+- `uploaded` / `preflight_complete`: no durable paid job/reservation yet;
+- `queued` / `processing`;
+- `review_required`;
+- `completed` / `completed_with_warnings`;
+- `failed` / `canceled` / `expired`.
+
+Terminal states cannot transition back to processing/completed. A late worker must fail its guarded state update.
 
 ### SourceDocument
-ID, job ID, original filename, media type, byte size, SHA-256 checksum, private storage path, detected document type, page count, PDF class, upload timestamp, processing status and safe error code. Original is immutable.
+ID, job ID, original filename, media type, byte size, SHA-256, private storage key, detected document/page count/class, upload time, safe status/error code. Immutable original source.
 
 ### SourcePage
-ID, source document ID, page number, classification, extraction method, provider request/run reference, source region/layout metadata, billable flag, billable reason code, usable-record count, assessment version and timestamp. Repeated processing attempts live in separate metering records.
+ID, source document ID, page number, classification, extraction method, provider run reference, region/layout metadata, timestamp. Do not store the canonical final billable decision here as independently mutable business truth.
 
 ### ExtractionRun
-ID, job ID, source document ID, run number/idempotency key, pipeline version, provider/configuration version, state, start/end times, safe error code/details and bounded summary counts. Do not put unbounded raw PDF content in summary JSON.
+ID, job ID, source document ID, run number/idempotency key, pipeline/config version, state, start/end time, safe error/summary. Avoid raw PDF text in summary JSON.
 
 ### ProviderUsageRecord
-ID, job ID, source page/range, provider, endpoint, provider request ID, attempt number, idempotency/request key, start/end time, status, reported pages/credits/units, actual provider cost/currency if available, retry classification, latency and safe error code. Append one record per attempt; do not overwrite failed attempts with the final retry.
+ID, job/source page range, provider, endpoint/config version, provider request ID, attempt, idempotency/request key, usage unit (`page`, `credit`, or provider-specific unit), quantity, status, timestamps, latency, retry class, cost/currency if available and safe error code. Append each attempt; do not overwrite earlier attempt cost/status.
 
-### BoqSection
-ID, job/source IDs, nullable source section ID/code/title, normalized title, display order, source page start/end and source location.
-
-### BoqLineItem
-ID, job/source IDs, optional section ID, display order and source row index/page/cell range/bounding box; row kind; raw/normalized code, description and unit; raw/decimal quantity, unit price and printed amount; reconstructed formula and amount; formula provenance (not applicable, reconstructed, user confirmed, unresolved); currency, extraction method, field confidence, review status/correction note and timestamps. Row kinds include item, section, note, subtotal, carried-forward, grand total, adjustment and unknown.
+### BoqSection / BoqLineItem
+Keep section, work-item, note, subtotal, carry-forward, grand-total, adjustment and unknown row kinds distinct. Store row order, raw and normalized fields, printed amount, formula/result/provenance, confidence/review, source page/region and timestamps. Printed amount is never overwritten by reconstructed amount.
 
 ### ValidationIssue
-ID, job ID, optional line/source IDs, issue code/severity, safe message, source location, suggested action, printed value, calculated value, difference, status and resolution timestamps.
+ID, job, optional row/source page, code/severity, safe message, source location, printed/calculated/difference values, suggested action, issue status/resolution. Review only blocks when a material decision is required.
 
 ### ExportArtifact
-ID, job ID, format/version, private storage path, created timestamp, source extraction run, row/warning counts, checksum, formula contract version and whether reconstructed formulas exist. Exports are immutable; regeneration creates a new artifact/version.
+ID, job, immutable artifact version, private storage key, created time, pipeline/run version, row/warning counts, checksum, formula contract version, recalculation/verification status and export manifest reference. A regeneration creates a new immutable version.
 
-## Wallet and payment entities
+### JobPageBillingAssessment — canonical page decision
+ID, job ID, source document/page, assessment policy/version, `billable`, reason code, substantive-record count, artifact ID/export manifest ID, assessment time and finalization state. Final assessment has a uniqueness guard per job/source page/artifact/policy version.
 
-### Wallet
-ID, owner user ID, currency fixed to IDR, cached available balance IDR, reserved balance IDR, timestamps and version/lock token. Unique per owner/currency as applicable. Cached values must reconcile with ledger and outstanding holds.
+The source page's convenience flags/counts, if retained for queries, are read projections updated from this canonical assessment and must be reconcilable; they are not independent write paths.
 
-### WalletLedgerEntry
-Immutable financial event with wallet/owner IDs, entry type, signed integer amount IDR, currency, related job/top-up/refund, idempotency key, optional reversed-entry ID, actor/source, safe metadata, timestamp and reason. Entry types include top-up credit, job charge, reservation, reservation release, refund, charge reversal and manual adjustment. Never edit/delete a settled entry; post a compensating entry.
+### Wallet / WalletLedgerEntry
+Wallet ID, owner user ID, IDR currency, cached available/reserved balances and version/lock token. Ledger entries contain signed integer amount, type (credit, charge, reservation, release, reversal/refund, approved adjustment), related job/order, idempotency key, linked reversal, actor/reason and timestamps. Original settled entries are immutable.
 
-### TopUpOrder
-ID, wallet/owner IDs, requested amount IDR (minimum Rp50.000), provider, provider order/reference ID, state (created, pending, paid, credited, failed, canceled, expired, reconciliation_required or refunded), expiry, timestamps, idempotency key, verified payment timestamp and safe failure/reconciliation code. An order is not wallet credit by itself.
+### TopUpOrder / PaymentEvent
+Order includes owner/wallet, requested amount (minimum Rp50.000), provider, provider order/reference, expiry, idempotency key, verified payment time and state: `created`, `pending`, `paid`, `credited`, `failed`, `canceled`, `expired`, `reconciliation_required`, optionally `refunded`.
 
-### PaymentEvent
-ID, provider, provider event ID, top-up order ID, received timestamp, verification status, event type, parsed amount/currency, safe metadata, processing status and idempotency key. Store only necessary redacted metadata. Enforce provider-event uniqueness to prevent replay/double credit.
+`paid` means the verified external event is recorded. `credited` means the associated wallet ledger credit has committed exactly once. Only `credited` unlocks funds. PaymentEvent stores provider event ID, order ID, verification and processing state, amount/currency, redacted metadata and idempotency key; enforce provider event uniqueness. Duplicate/out-of-order events cannot double-credit or regress the order.
 
-### JobPageBillingAssessment
-ID, job/source-page IDs, assessment version, billable boolean, reason code, usable-record count, export artifact ID, assessment timestamp and finalization state. Unique on job/source/page for final assessment. Billability is deterministic application logic, not a model response.
+### JobCharge / PriceSnapshot / RefundOrAdjustment
+JobCharge records job/wallet, price snapshot, billable-page count, amount, ledger reference, state, idempotency key and settlement time/version. One settled customer charge per job. PriceSnapshot records price effective time/version and minimum top-up. RefundOrAdjustment points to the original transaction and a compensating ledger entry.
 
-### JobCharge
-ID, job/wallet IDs, price snapshot IDR/page, billable page count, amount IDR, related ledger entry, state (estimated, reserved, settled, zero_charge or reversed), idempotency key, settlement timestamp and calculation version. One settled charge per job; source-page assessments sum to its billable count.
+## Invariants
 
-### PriceSnapshot
-ID, effective timestamp, price IDR/page, currency, minimum top-up IDR, policy version, status and decision reference. A job references the snapshot used at booking; old jobs are not repriced retroactively.
-
-### RefundOrAdjustment
-ID, wallet/top-up/job reference, linked ledger entry/reversal, type, amount, reason, status, requested/approved/processed timestamps, actor and optional external refund reference. Keep provider payment refund separate from internal wallet credit/reversal.
-
-## Invariants and relationships
-
-- Sum of final billable-page assessments equals JobCharge billable count.
-- Final customer amount equals billable pages × price snapshot; no extra charge for retries.
-- No job charge is settled before the downloadable XLSX exists.
-- No deliverable means charge zero and reservation release.
-- A page is billed at most once per job; replay does not create a second charge.
-- Duplicate verified payment callbacks do not create another wallet credit.
-- No negative available balance; reservation and final charge run transactionally.
-- Users can access only their own jobs, documents, exports, wallet and transactions.
-- Provider COGS is derived from provider usage records, not customer billing entries.
+- Final billable page count equals the sum of final `JobPageBillingAssessment.billable` for the exact export manifest.
+- A page is billable only when a substantive RAB/BOQ record on that page is retained in the downloadable artifact; heading/note/header/footer alone is insufficient.
+- Charge = billable pages × price snapshot; provider call/retry count never affects customer amount.
+- No valid downloadable XLSX means charge zero and one reservation release.
+- Atomic reservation/settlement and uniqueness prevent overspend or duplicate charge/credit.
+- Holds expire; terminal jobs cannot be revived by late queue workers.
+- User-owned records/files require authenticated ownership and RLS/grant enforcement.
+- Provider COGS comes from provider-usage records, not customer charge entries.
 
 ## Before schema implementation
 
-Approve tenant ownership/RLS, retention/deletion, maximum file size/page count, supported MIME, provider privacy, price snapshot semantics, wallet transaction locking, migration rollback, webhook verification, event idempotency and ledger reconciliation. At inspection on 2026-10-25, the connected Supabase public schema had no tables; this specification must not be mistaken for deployed tables.
+Approve RLS/grants, storage ownership, auth boundary, file/job/hold expiry, provider account privacy/usage, payment callback contract, transaction locking, migrations/rollback and deletion/retention. The inspected Supabase public schema had no tables at the 2026-10-25 snapshot.
