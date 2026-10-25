@@ -94,3 +94,12 @@ This log records decisions that affect product behavior, data contracts, cost an
 - Provider timeout: persist provider job/request IDs and check the existing provider job status before retrying; never blindly duplicate a possibly running provider operation.
 - Provider COGS: log every attempt internally for per-job/per-attempt detail; use provider usage exports/invoices for aggregate reconciliation. Never infer provider cost from customer billable-page counts.
 - Commercial assumptions: keep Rp900–Rp1.000/page as a provisional provider-cost reserve only. Do not publish or rely on a per-page contribution estimate until total measured costs support it.
+
+
+## DEC-015 — Portable conversion worker; Cloudflare first, container by measured need
+
+- Status: Approved target direction; implementation absent.
+- Decision: Keep Cloudflare as the web/API starting point and Supabase as the durable system of record. Put conversion execution behind a narrow worker contract. Benchmark XLSX generation and required formula recalculation on the actual planned Worker runtime using permitted golden fixtures.
+- Decision rule: Keep conversion in Workers only if measured runtime, CPU, memory, artifact size, calculation capability, and recovery behavior fit a safe, documented budget. Use a container worker when the required calculation engine (for example, LibreOffice) or resource/runtime requirements do not fit.
+- Queue rule: Do not add a queue in advance. If evidence justifies it, retain one queue/consumer with database commit-before-dispatch, recovery for committed-but-undispatched work, and idempotent handling of at-least-once delivery.
+- Consequence: Worker placement and queue delivery are execution details; they must not change the one durable job lifecycle, source-of-truth job state, ownership, page assessment, or billing invariants. Record the benchmark and final deployment choice before implementing the production pipeline.
