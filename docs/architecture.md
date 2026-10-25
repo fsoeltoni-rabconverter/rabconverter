@@ -1,75 +1,80 @@
 # Architecture and Cloud Delivery — PDF RAB MVP
 
-Status: target architecture, not implementation evidence. Last infrastructure inspection: 2026-10-25.
+Status: target architecture only; not implementation evidence. Infrastructure snapshot reviewed 2026-10-25.
 
-## Operating constraint
+## Principles
 
-RabConverter development and delivery are cloud-only. GitHub is source of truth; GitHub Actions runs CI; Cloudflare is the intended web host/preview; Supabase is the intended auth, metadata, ledger and private-storage platform. A target architecture is not proof any component is already deployed.
+Keep the design small. The database is the source of truth for identity ownership, job state, wallet/ledger, page assessments and payment credit. The UX stays upload-first. Do not add services simply to mirror each processing step.
 
-## MVP runtime path
+## Target runtime path
 
-Browser upload and price estimate → authenticated API/job creation → private source storage → page inventory/classification → Reducto Deep Extract adapter → canonical RAB rows → deterministic formula/reconciliation code → user review → XLSX generation and verification → page-level billability → atomic wallet settlement → authenticated download.
+Browser upload/preflight → sign-in before durable owner-scoped job/storage → compact estimate and wallet status → explicit Konversi PDF → atomic job creation and max reservation in Supabase Postgres → durable job processing (Cloudflare Worker/Queue only if actual runtime limits require it) → Reducto extraction → deterministic row/formula validation → exception-only user decision if required → verified/recalculated XLSX → substantive page assessment → atomic settlement/release → authenticated download and compact receipt.
 
-## Components
+A status label or architecture diagram is not evidence a component exists.
 
-- **Frontend:** upload-first flow, page/price estimate, balance status, real processing status, extracted-row preview, warnings and download.
-- **Cloudflare:** host web app and API routes/workers only after runtime choice is validated. Use durable/background processing where job duration or size exceeds request limits.
-- **GitHub:** source of truth for code, documentation, tests, migrations and deployment configuration.
-- **GitHub Actions:** lint/type/test/build and gated deployment; tests mock paid provider and payment gateway calls.
-- **Supabase Auth:** identity, if sign-in is enabled.
-- **Supabase Postgres:** jobs, pages, provider usage, normalized rows, issues, export metadata, wallet, immutable ledger, top-ups, payment events and charge assessments.
-- **Supabase Storage:** private originals/exports with owner-gated access.
-- **Reducto Deep Extract:** sole initial external PDF extraction provider, through a server-side adapter. LlamaExtract and Pulse Ultra 2 are excluded.
-- **Payment gateway:** not selected. Must support a suitable local payment method (QRIS preferred for evaluation), authenticated callbacks, settlement state, idempotency and reconciliation.
-- **XLSX generator:** produces editable formula-bearing workbook; does not pretend PDF-only values are recovered original Excel formulas.
-- **Billing service:** application-owned deterministic page classifier, price snapshot, reservation, final charge and immutable ledger entries; provider usage is separately metered.
+## Components and ownership
 
-## Runtime and financial invariants
+- **Frontend:** one main upload action; inline estimate, progress, exception and result states. No prerequisite dashboard.
+- **Cloudflare Pages/Workers:** intended web/API runtime. If PDF/provider duration exceeds request limits, use one durable queue/consumer pattern. Queue delivery is at least once; consumers must be idempotent. Add a DLQ only if needed for actionable recovery, not as a second workflow system.
+- **GitHub/GitHub Actions:** source of truth, deterministic CI, preview/release workflow. Current repository has no verified application/CI.
+- **Supabase Auth:** required before durable owner-scoped jobs/source storage and before any paid provider call or wallet operation. Basic preflight can precede login; the MVP does not offer guest wallet/guest paid jobs.
+- **Supabase Postgres:** conceptual jobs/pages/rows/issues/artifact metadata, wallet/immutable ledger, top-up orders/payment events and page assessments. No tables exist in the inspected public schema snapshot.
+- **Supabase Storage:** private originals and exports; short-lived signed URLs or authenticated proxy.
+- **Reducto Deep Extract:** only extraction provider for initial runtime, through a server-only adapter. LlamaExtract/Pulse Ultra 2 excluded.
+- **Payment gateway:** unselected. Evaluate QRIS support, fees, verified callbacks, duplicate/event handling, settlement reports and refund mechanics before choosing.
+- **XLSX generation/verification:** generate formula-bearing editable XLSX; validate structure, recalculate eligible formulas in the selected supported engine, scan formula errors and verify row/page provenance.
+- **Billing transaction:** application-owned, database transaction/functions for reservation/settlement/release and unique idempotency keys; customer billing is separate from provider usage COGS.
 
-- Never expose provider/payment credentials to the browser.
-- Provider output proposes extracted records; deterministic application logic owns canonical validation, billable-page classification and monetary charge calculation.
-- Charge only after a downloadable XLSX artifact exists.
-- Final charge is final billable pages × price snapshot. No additional customer charge for retries.
-- Failed/no-artifact job is zero charge and reservation is released.
-- Top-up credit occurs only after a verified server-side payment event.
-- Ledger/idempotency constraints prevent duplicate charge or credit.
-- Provider cost for non-billable pages must still be recorded as RabConverter COGS.
-- Use database transactions/locks for wallet reservation and settlement; no browser-based balance calculations are authoritative.
+## State and financial invariants
 
-## Decisions needed before implementation
+- Job state and billing/payment state are distinct.
+- `paid` means payment event verified; `credited` means wallet credit committed exactly once. Only `credited` makes funds available.
+- One job has one reservation lifecycle and at most one customer job charge; retries/queue redelivery cannot create more jobs/charges.
+- A substantive page assessment references the exact XLSX artifact and export manifest. `JobPageBillingAssessment` is canonical; `SourcePage.billable` (if kept) is only a reconciled projection.
+- A job may not be charged until a verified downloadable XLSX exists.
+- If no deliverable exists, charge Rp0 and release reservation once.
+- All holds have bounded expiry. Guarded terminal state prevents a late worker from reviving/charging a failed, canceled or expired job.
+- Provider spend on non-billable source pages is tracked as RabConverter COGS.
+- All money arithmetic uses integer IDR and transactional wallet checks; browser values are not authoritative.
+- Privileged database functions need explicit ownership checks and least privilege; security-definer functions pin `search_path` and restrict execute grants.
 
-1. Maximum PDF bytes/pages, extraction timeout, concurrency and queue strategy.
-2. Exact Reducto Deep Extract endpoint/schema/options and account-level price.
-3. Reducto data retention, training/use, processing region, DPA and deletion semantics for the selected plan.
-4. Workbook generation library and recalculation-validation strategy.
-5. Payment gateway and exact QRIS/payment flow, fees, webhook security and refund/reconciliation.
-6. Wallet transaction locking, page-charge idempotency and reversal schema.
-7. Retention/deletion timeline and public privacy notice.
-8. Legal/accounting handling of top-up balance, payments, fees, taxes and refunds.
+## Concrete launch decisions (keep as release gates)
 
-## Implementation order
+Before implementing paid processing, decide and test:
+1. Maximum upload bytes/pages, total job runtime/worker lease, provider timeout and bounded retry limit.
+2. Exact Reducto endpoint/schema/options, account plan, page-versus-credit metering and account usage export.
+3. Data retention/training/region/DPA/terms for the selected Reducto account.
+4. Workbook generation and formula recalculation/error-scanning approach.
+5. Payment vendor and exact QRIS/webhook/settlement/refund/reconciliation contract.
+6. Reservation expiry and review-required expiry duration.
+7. Deletion/retention policy and customer notice.
+8. Whether a queue is needed. Start without one only if request/runtime limits and reliability tests prove it safe; otherwise choose one queue/consumer plus bounded retry.
 
-1. Finalize docs and licensing for golden fixtures.
-2. Create a static UX shell using clearly labelled sample data.
-3. Configure CI and Cloudflare preview.
-4. Add Supabase migrations/RLS and private upload.
-5. Integrate Reducto adapter with synthetic or permitted golden files.
-6. Implement row mapping, formula candidates and deterministic reconciliation.
-7. Implement review and XLSX generation/recalculation tests.
-8. Implement page metering, wallet/ledger and settlement tests.
-9. Select and integrate payment provider with callback verification.
-10. Complete security/privacy gates and deploy a reviewable preview.
-11. Run failure/retry/idempotency/load/financial-reconciliation tests before release.
+Do not leave unspecified values as silent product behavior. Use config values and gates; avoid premature numeric limits until the provider and runtime have been tested.
 
-## Cloud-only Git workflow
+## Implementation sequence
 
-Feature branch and PR → automated validation → Cloudflare preview → inspect actual URL → merge only after review. Migrations are versioned, code-reviewed and applied deliberately. Do not change production schema as a side effect of a documentation change.
+1. Finish docs, source licensing and golden fixture expectations.
+2. Build a static upload-first UI shell with clearly labelled sample data.
+3. Add GitHub Actions deterministic lint/typecheck/test/build and Cloudflare preview.
+4. Add Supabase migrations, RLS/grants, private upload and authenticated ownership.
+5. Add the server-side Reducto adapter and measured extraction fixtures.
+6. Implement normalization, rows, formula candidates, source provenance and deterministic reconciliation.
+7. Implement XLSX generation, recalculation and formula error verification.
+8. Implement atomic reservation/settlement/release, page assessments and payment event/credit idempotency.
+9. Select/integrate payment provider after provider evaluation.
+10. Test cancellation/timeout, late worker, duplicate callback, concurrent reservation, privacy and financial reconciliation.
+11. Inspect a real desktop/mobile preview and deploy only through the reviewed release flow.
 
-## Current infrastructure state (verified snapshot 2026-10-25)
+## Cloud-only workflow
 
-- The GitHub repository fsoeltoni-rabconverter/rabconverter contains README and product/engineering documentation, but no application source tree has been verified.
-- On the connected Cloudflare account, inspection found zero Worker scripts and zero Pages projects for RabConverter.
-- Supabase project Rab Converter (ref zkcziucjogprfzhjuaex) is active, but the public schema contained zero tables at inspection time.
-- No working application preview or production URL has been verified.
+Feature branch → PR → automated checks → preview URL → desktop/mobile inspection → reviewed merge. Do not apply schema or production changes as a side effect of doc work.
 
-This is a dated snapshot limited to connected accounts/resources inspected. Recheck before future implementation/release claims; do not describe the repository as empty, and do not describe the app as live.
+## Infrastructure snapshot (2026-10-25)
+
+- The connected GitHub repo contains documentation; no application source tree was verified.
+- The connected Cloudflare account had no RabConverter Workers or Pages project.
+- The active Supabase project had zero public tables at inspection time.
+- No working preview or production application URL was verified.
+
+Recheck the connected resources before any future implementation/release claim.
