@@ -1,136 +1,108 @@
 # User Experience Specification — PDF RAB to Excel
 
-Status: screen-level target specification, not implementation evidence.
-
-The end-to-end journey and transitions are owned by [application-flow.md](application-flow.md). This document defines the screen hierarchy, interaction details, accessibility and user-facing states. If a UI detail adds friction to the normal path, follow the application-flow simplicity rules without weakening billing integrity or output correctness.
+Status: target screen-level behavior, not implementation evidence.
+The end-to-end path and state transitions are owned by [application-flow.md](application-flow.md). This document defines UI hierarchy, screen interactions and accessibility. If a screen-level detail adds friction to the normal path, follow the flow's simplicity rules without weakening output correctness or billing integrity.
 
 ## Design reference
 
-Use remove.bg only as a benchmark for interaction simplicity: one main upload action, understandable processing status, a useful result and clear download. Do not copy its brand assets or suggest affiliation. Conversion—not a complex dashboard—is the core loop.
+Use remove.bg only as an interaction-simplicity benchmark: one primary upload action, understandable automatic processing, useful result and clear download. Do not copy its technology, assets or imply affiliation.
 
 ## Screen model
 
 ### 1. Conversion home
 
 - Headline: “Ubah PDF RAB menjadi Excel dengan rumus yang bisa diedit.”
-- One prominent upload area with drag/drop and browse.
-- State the input scope (PDF RAB/BOQ for the initial release) and that formulas are reconstructed, not recovered exactly from the PDF.
-- Show a concise price cue: Rp2.500 per billable page.
-- Keep history, account, wallet details and help secondary to the upload action. Do not require a feature tour or dashboard before first conversion.
+- One prominent drag/drop and browse area.
+- State PDF RAB/BOQ scope, formula reconstruction (not original formula recovery), concise private-document notice and price cue Rp2.500 per billable page.
+- Keep history, account, wallet detail and help secondary. No dashboard, tour or configuration wizard before first conversion.
+- Basic preflight may precede sign-in; authenticated identity is required before durable owner-scoped upload/job, paid provider call, or wallet action. Never imply guest wallet is supported.
 
 ### 2. Estimate panel
 
-After preflight, show these together in a compact panel rather than sending the user through a separate pricing wizard:
+After preflight, show together in one compact inline panel:
+- detected source page count;
+- Rp2.500/page and estimated maximum (accepted pages × price);
+- current available wallet balance;
+- exact shortfall and top-up action if insufficient;
+- concise note that final billing is based on substantive RAB/BOQ records retained in a verified downloadable XLSX.
 
-- Detected source page count.
-- Price Rp2.500/page and estimated maximum (page count × price).
-- Current available balance and whether a reservation can be covered.
-- Exact shortfall and top-up action when the balance is insufficient.
-- A concise note that the final charge depends on RAB/BOQ pages that contribute usable records to a successfully generated XLSX.
-
-Show the **Konversi PDF** action only after the estimate and balance state are available. A user's explicit start confirms paid processing. Never call the paid extraction provider before the server confirms the user's intent and the reservation policy is satisfied.
+The estimate is a reservation ceiling, not the guaranteed final charge. Minimum top-up Rp50.000 is a minimum wallet funding transaction, not a minimum conversion fee. Show **Konversi PDF** only after identity, price estimate and balance state are available. Paid provider processing requires explicit click and successful atomic server-side reservation.
 
 ### 3. Processing state
 
-Keep the user in the same conversion journey where practical. Show real stage labels:
+Keep processing in the same conversion journey. Show only real backend milestones such as checking the PDF → reading pages → extracting tables → organizing RAB rows → checking formulas/totals → preparing Excel.
 
-validating → reading pages → extracting tables → mapping RAB rows → reconstructing formulas → checking totals → preparing Excel.
-
-- Status and retry messaging must come from actual job state.
-- Do not invent completion percentages or estimate processing times without a dependable basis.
-- Do not expose implementation jargon such as provider adapter, canonical model, ledger transaction or settlement RPC.
-- Allow safe navigation away when the job can continue durably, but do not promise background completion until it is implemented and verified.
+- Status/retry messaging comes from the actual persisted job state.
+- Do not simulate percentages or promise a duration without evidence.
+- Do not expose provider adapter, canonical model, queue, ledger function or settlement RPC jargon.
+- Navigation away is safe only after durable background processing has actually been implemented.
+- Errors and retry controls must not create duplicate jobs.
 
 ### 4. Result state
 
-Once a valid workbook exists, **Download Excel (.xlsx)** is the dominant action. Keep the main result easy to scan:
+Once a verified workbook exists, **Download Excel (.xlsx)** is the dominant action. Keep the summary easy to scan:
+- file name and download action;
+- billable/non-billable page counts with concise reason categories;
+- calculation: billable pages × Rp2.500 = final charge;
+- amount charged, released reservation, remaining balance and receipt/job reference;
+- warning summary and source-linked details where important.
 
-- File name and download action.
-- Billable pages, non-billable pages and concise reason categories.
-- Calculation: billable pages × Rp2.500 = final charge.
-- Actual amount charged, released reservation, remaining balance and job/receipt reference.
-- Warning count or a concise important-warning summary when relevant.
+Do not require a full preview or dashboard before download. Detail can be expanded when needed. No usable verified downloadable workbook means show a clear failure/no-result state, Rp0 charge and reservation release.
 
-Do not make a full preview or dashboard a mandatory gate before the download. Row previews, source context and detailed warnings can expand when needed. A ready workbook must not be hidden behind a tutorial or unrelated navigation.
+### 5. Exception-only review
 
-### 5. Focused exception panel
+- The system automatically validates rows, formulas, totals and source provenance.
+- If uncertainty can safely be preserved, keep printed values, omit unsupported formulas, add a source-linked warning and offer the workbook when it meets export criteria.
+- Ask a focused contextual question only when a material decision prevents an honest usable workbook.
+- Never invent quantity, rates, taxes, overhead, profit or formula membership.
+- A warning alone does not make a page non-billable. Billable criteria are owned by pricing-and-billing.md.
 
-Review is exception-driven, not mandatory for every job.
+### 6. Top-up and recovery
 
-- Flag uncertain values, ambiguous number formats, low-confidence extraction, unclear row mapping, formula mismatch and missing fields with source page/row context.
-- Ask only a focused question when a user decision is genuinely required to generate a safe output.
-- Where uncertainty can be represented safely, preserve printed values, leave speculative formulas unresolved, include a warning, and offer the workbook when it meets the export contract.
-- Never invent rates, quantities, taxes, overhead, profit, or calculation rules.
-- Make the warning understandable without forcing the user to learn the extraction pipeline.
+Top-up continues the current conversion context; it is not a funnel that asks the user to re-upload without need.
 
-### 6. Top-up and recovery state
+Display persistent payment state and distinguish:
+- **Pending:** awaiting verified payment; no wallet credit or conversion start.
+- **Paid:** provider payment event verified; wallet ledger credit may still be pending.
+- **Credited:** wallet credit committed exactly once, balance refreshed, conversion can be started.
+- **Failed/canceled/expired:** no credit; explain next action.
+- **Reconciliation required:** ambiguous gateway state; never falsely indicate success.
 
-Top-up is a continuation of the current conversion, not a separate funnel. Preserve the selected-file/job context where safely possible. Display the persisted order status and return the user to the estimate after a verified payment. Do not start paid processing automatically after top-up; require the user to select **Konversi PDF**.
+The UI must not return to a spend-ready state until credited. After credit, return to the current file/estimate and require explicit **Konversi PDF**. Never auto-start conversion from payment callback. QRIS is not displayed as available until a real vendor integration is verified.
 
-The payment provider is not yet chosen. QRIS is a preferred option to evaluate and must not appear as available until an actual integration is implemented and verified.
+## User-visible states
 
-## Pricing and billing UI contract
+Every state has a concise label and next action where appropriate. Use inline panels when enough; do not add separate pages for backend stages.
 
-### Before processing
-
-- Price: Rp2.500 per page.
-- Source page count and estimated maximum charge.
-- Current balance, reservation requirement and any shortfall.
-- Minimum top-up Rp50.000 when top-up is needed.
-- Explain briefly that blank, cover-only, unrelated, drawing-only and failed pages with no usable RAB/BOQ data are not charged; pages contributing usable data to a successful XLSX may be charged even if the workbook carries a review warning.
-- Explain that retries do not add customer charges.
-- Obtain explicit user confirmation before paid processing.
-
-### After processing
-
-- Report total source pages, billable pages, non-billable pages and reason categories.
-- Show the arithmetic for the final charge.
-- Show amount charged, unused reservation released, remaining balance and job/ledger reference.
-- If no usable XLSX is produced, show zero charge and reservation release.
-- If a usable workbook is completed with warnings, keep the warning summary visible without automatically blocking the download.
-- Provide a route to report a duplicate charge or dispute a page assessment.
-- Customer billing is determined by [pricing-and-billing.md](pricing-and-billing.md), not provider call count or provider usage.
-
-## Required states
-
-All required states must have an understandable label, next action where relevant, and truthful financial status. Avoid separate pages when a clear inline state is sufficient.
-
-- Empty upload; file selected; file checking.
-- Unsupported, damaged, encrypted or too-large PDF.
-- Text, scan, mixed, unrelated or uncertain classification where detected.
-- Estimate ready; insufficient balance; reservation confirmed.
-- Top-up created, pending, paid, failed, canceled, expired or requiring reconciliation.
-- Processing, bounded retry, partial extraction and focused review required.
-- Completed without material warnings; completed with warnings.
-- XLSX generated and download ready.
-- No usable records / zero billable pages.
-- Processing or export failure, no charge and reservation released.
-- Charge settled, receipt available and balance updated.
-- Duplicate payment callback safely ignored.
-- User deletion and expired artifacts according to the published retention policy.
+- Empty upload, file selected, file checking.
+- Unsupported, damaged, encrypted, empty or too-large PDF.
+- Estimate ready, auth required, insufficient balance, reservation confirmed.
+- Top-up created, pending, paid, credited, failed, canceled, expired, reconciliation required.
+- Processing, bounded retry, partial extraction, focused review required.
+- Completed, completed with warnings, XLSX verified and download ready.
+- No substantive records/zero billable pages.
+- Processing/export failure, no charge and reservation released.
+- Charge settled, receipt and balance updated.
+- Cancellation, expired hold or recovery state when relevant.
+- Duplicate callback safely ignored; late worker cannot change a terminal job.
 
 ## Visual and accessibility priorities
 
 - Clean, upload-first, premium and low-friction.
-- One visually dominant primary action per state.
-- Desktop table and warning details need strong scanning hierarchy, but are secondary to download when the workbook is ready.
-- Mobile must support upload, start, status, warning summary and download without desktop-only interactions.
-- Numeric values align right; descriptions wrap naturally.
-- Printed source values and calculated values are visibly different.
-- Source-page provenance and formula reconstruction warnings are easy to discover.
-- Status labels and progress reflect actual backend state.
-- Keyboard navigation, accessible labels/focus, sufficient contrast and reduced-motion support.
+- One visually dominant action per state.
+- Source values and calculated values must be visually distinct.
+- Desktop/mobile support upload, start, status, warnings and download without desktop-only interactions.
+- Desktop row/preview details have strong scanning hierarchy but are secondary to download when ready.
+- Keyboard navigation, clear focus, accessible labels, sufficient contrast and reduced-motion support.
+- Progress, warning and financial labels reflect backend state; never use fake progress.
 
 ## UX anti-patterns
 
-- Requiring a complex dashboard or full-document review before first download without a concrete correctness reason.
-- Making each backend stage a separate wizard page.
+- Mandatory dashboard/full-document review before first usable download without concrete reason.
+- One wizard page per internal processing stage.
 - “100% accurate” or original-formula recovery claims.
-- Fake progress, hidden provider waits or ambiguous charges.
-- Charging every submitted page without page-level assessment.
-- Charging before a downloadable XLSX exists.
-- Treating provider usage or retries as additional customer billable pages.
-- Inventing missing values, taxes, rates, overhead or formula rules.
-- Exporting only values while advertising formulas.
-- Showing QRIS/payment success before backend verification.
-- Hiding material warnings or preventing download of an otherwise valid workbook without a specific reason.
+- Fake progress, hidden waits or surprise charges.
+- Charging all submitted pages or per provider call/retry.
+- Calling a payment credited before its ledger entry commits.
+- Showing QRIS/payment success before gateway integration and callback verification.
+- Hiding material warnings, inventing source values, or blocking a valid workbook without a specific correctness reason.
