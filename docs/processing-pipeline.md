@@ -1,43 +1,54 @@
-# Processing Pipeline
+# Processing Pipeline — PDF RAB
 
 ## Pipeline stages
 
-1. **Ingress** — authorize user, validate request, create job and source metadata, calculate checksum, save source to private storage.
-2. **File validation** — signature/type, size, page/sheet count, encryption/corruption and resource budget.
-3. **Document classification** — identify likely BOQ/RAB, AHSP/AHS, invitation, drawing, specification, quote or unknown.
-4. **Native extraction** — use the best structural representation first: workbook cells/formulas, CSV values, or PDF text/table geometry.
-5. **Table segmentation** — locate sections, headings, item rows, continuation rows, notes, subtotals and totals.
-6. **Normalization** — normalize field shapes and decimal values while preserving raw text, row order and source coordinates.
-7. **Validation** — schema checks, arithmetic comparisons, duplicate/omission heuristics, locale ambiguity, revision conflicts, totals/recap consistency.
-8. **Human review** — expose exceptions and let user confirm/correct/reject candidate fields.
-9. **Export generation** — produce workbook/CSV from reviewed data, adding provenance and warning summary where appropriate.
-10. **Audit/retention** — record run/version/status without logging full document content; expire/delete original and derived artifacts based on approved policy.
+1. **Ingress** — authorize user, validate request, create job/source metadata, checksum file and store original privately.
+2. **PDF classification** — identify born-digital, scanned, mixed, encrypted, corrupt or unsupported pages as reliably as possible.
+3. **Text/layout extraction** — extract selectable text, words, coordinates, page images and candidate table geometry.
+4. **OCR fallback** — use for scanned/image pages; attach confidence to recognized numeric and structural fields.
+5. **Table segmentation** — detect columns, rows, repeated headers, section headings, descriptions spanning multiple lines, notes, subtotals, carry-forward and grand-total rows.
+6. **Normalization** — map source labels to canonical fields while preserving raw values, row order, page/region and number locale.
+7. **Formula candidate creation** — identify eligible quantity × rate rules and possible subtotal/grand-total membership; mark each candidate as reconstructed.
+8. **Validation** — compare line formulas, subtotals and totals with printed source amounts; detect double-counted carry-forward rows, omitted items, ambiguous numeric formats and likely duplicate rows.
+9. **Human review** — expose uncertain fields and formula mappings; let user confirm, correct or reject candidates.
+10. **Export generation** — produce XLSX formulas for accepted rules and a warning sheet for unresolved items.
+11. **Audit/retention** — save run/version/status without full source contents in logs; apply approved retention/deletion behavior.
 
 ## Provider-independent interface
 
-Document adapters should implement a conceptual contract:
-- inspect(file) → document metadata, detected type and warnings
-- extract(file) → candidate sections, rows, source references and raw values
-- normalize(candidate, locale/context) → canonical records with normalization provenance
-- validate(records, source metadata) → issues
-- export(approved records, template options) → artifact
+Conceptual parser contract:
+- inspect(file) → PDF class, metadata, page count and warnings
+- extract(file) → text/layout/table candidates with source references
+- normalize(candidate, locale/context) → canonical records and normalization provenance
+- classify_rows(records) → item/section/note/subtotal/total/adjustment candidates
+- propose_formulas(records, confirmed mapping) → formula candidates with provenance and confidence
+- validate(records, formulas, printed totals) → issues
+- export(approved records, formula contract) → XLSX/CSV artifact
 
-Keep parser/OCR implementations replaceable. Choose a provider only after a comparative benchmark on golden files and a privacy/cost review.
+Keep OCR/parser implementations replaceable. Choose a provider only after a comparative test using representative Indonesian PDF RABs, plus cost, privacy, latency, size-limit and output-fidelity review.
 
 ## Reliability
 
-- Each job/run has a durable ID.
-- Retries are idempotent and do not create duplicate exports.
-- A failed stage records a stable error code and safe diagnostic summary.
-- Partial extraction remains reviewable when feasible; do not label as full success.
-- File processing is resource-limited and should not block normal app interactions.
-- Never execute macros or arbitrary code from uploaded workbooks.
-- Avoid long-running processing inside a single synchronous web request. Select background execution approach after establishing expected file sizes and runtime.
+- Every job/run has a durable ID and deterministic version.
+- Retries are idempotent; no duplicate exports.
+- A failed stage produces a stable error code and safe diagnostic summary.
+- Partial extraction remains reviewable when possible; never label partial output as complete.
+- File processing is resource-limited and does not block normal app interaction.
+- Do not execute embedded content from uploads.
+- Use background processing when file size/duration makes a synchronous request unreliable.
 
 ## Confidence and review
 
-Confidence belongs at field/row level, not only document level. Unknown/unparsed values remain null. A number inferred from ambiguous localization, OCR or fuzzy row mapping must be flagged. The UI must show the source around the extraction and allow user correction.
+Confidence belongs at field/row level, not just document level. Unknown values remain null. A number inferred from ambiguous localization, OCR or uncertain column mapping is flagged. The user can inspect the source context before accepting the row/formula.
+
+## Formula policy
+
+- A PDF's printed amount is not proof of its formula.
+- New formulas are reconstructed and labelled.
+- Do not create price or unit values.
+- Do not silently insert tax/overhead/profit.
+- Reconciliation differences may be source errors, rounding, manual adjustments or parser errors; display the delta and source rather than automatically replacing the printed total.
 
 ## Revision handling
 
-Record each source document and revision independently. Compare normalized row candidates across revisions only when identity matching confidence is sufficiently high. Report additions/deletions/changed descriptions/units/quantities; do not overwrite prior confirmed data silently.
+Treat each uploaded revision independently. Compare rows across revisions only when row identity matching is sufficiently confident. Report added/removed/changed rows and amounts; never overwrite confirmed prior rows silently.
