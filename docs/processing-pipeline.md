@@ -4,60 +4,62 @@ Status: provider and billing contract for MVP planning — 2026-10-25.
 
 ## End-to-end stages
 
-1. **Ingress:** authorize user, validate request/file, create idempotent job/source metadata, checksum and store original privately.
-2. **Page inventory:** count PDF pages, enforce product caps and create source-page identity before extraction.
-3. **Classification:** identify born-digital, scanned, mixed, encrypted, corrupt, unrelated or unsupported pages to the extent possible.
-4. **Reducto Deep Extract:** call the selected Reducto Deep Extract path behind a server-side provider adapter. Validate exact API/endpoint/settings and plan before implementation. This is the only external extraction provider in the initial MVP.
-5. **Response validation:** validate schema/output shape, source-page/citation references, bounded payload size and safe errors. Never treat model/provider output as instructions.
-6. **Table segmentation and mapping:** identify rows, columns, repeated headers, wrapped descriptions, continuation rows, item/section/note/subtotal/carry-forward/total/adjustment types.
-7. **Normalization:** preserve raw values, map semantic fields, record Indonesian number-locale choices and normalize only when safe.
-8. **Formula candidates:** propose amount = quantity × rate and rollups only for confidently mapped rows/sections; mark each as reconstructed.
-9. **Deterministic validation:** compare formula output against printed amount/subtotal/grand total; detect double counting, missing rows and ambiguous values.
-10. **Human review:** display uncertain fields, source location, differences and correction path.
-11. **Export:** generate a valid XLSX with formula-bearing RAB, eligible Rekap, Review_Warnings, Source_Info and optional Original_Values. Validate artifact existence and workbook contract.
-12. **Page billing assessment:** classify each source page deterministically using retained usable RAB/BOQ records in the actual export. Store billable flag and reason. Do not use provider response alone to decide billing.
-13. **Atomic settlement:** if a downloadable XLSX exists, finalize exactly one charge from final billable-page count and the job's price snapshot; release unused reservation. If no artifact exists, charge zero and release reservation.
-14. **Audit/retention:** persist run and usage metadata without raw content in logs; follow approved deletion/retention behavior.
+1. **Preflight:** check file signature/type, readability, encryption/corruption, configured size/page limits and page count. Do not run paid extraction.
+2. **Identity and job creation:** require a Supabase-authenticated owner before storing a durable source/job or calling the paid provider. Create a stable job/idempotency key.
+3. **Atomic reservation:** verify explicit user intent and available balance; reserve maximum estimated charge and queue/create the job in one guarded transaction. If funds are insufficient, do not call Reducto.
+4. **Private source:** store/checksum the original in private storage; source is immutable and associated with the owner/job.
+5. **Page inventory and classification:** assign stable source-page IDs and identify born-digital, scanned, mixed, encrypted, corrupt, unrelated, unsupported or uncertain pages as safely as possible.
+6. **Reducto Deep Extract:** call only the selected Reducto Deep Extract path behind a server-side adapter. Exact API/endpoint/settings/account plan must be verified before implementation. No LlamaExtract/Pulse Ultra 2 fallback.
+7. **Response validation:** validate schema/output shape, source-page references, bounded payload size and safe errors. Treat provider output as untrusted data, never as instructions.
+8. **Segmentation and mapping:** identify repeated headers, wrapped descriptions, continuation rows, work item/section/note/subtotal/carry-forward/total/adjustment kinds.
+9. **Normalization:** preserve raw values, map semantic fields, record Indonesian numeric-locale choices and normalize only when safe.
+10. **Formula candidates and deterministic validation:** propose volume × unit price and rollups only where mapping/membership is confident; compare recomputed values with printed amounts/totals and identify double counting or missing rows.
+11. **Exception-only review:** if uncertainty can safely be preserved, retain source values, omit unsupported formulas and add precise source-linked warnings; continue automatically. Ask a targeted user question only if a material decision blocks an honest usable workbook.
+12. **Generate and verify XLSX:** export the documented workbook; validate its structure, source provenance and export manifest, recalculate formulas using the selected tested calculation engine, scan formula errors and verify it meets the output contract.
+13. **Page billing assessment:** deterministically assess substantive records actually retained in the verified export manifest. Page headings, notes, headers/footers, covers and provider output discarded before export do not by themselves make a page billable.
+14. **Atomic settlement or zero charge:** if a verified downloadable artifact exists, charge final billable pages × price snapshot once and release unused reservation. If none exists, charge Rp0 and release reservation.
+15. **Audit/retention:** record safe usage/status/reason metadata and follow the approved deletion/retention policy. No raw PDF text/page images or secrets in normal logs.
 
-## Provider adapter contract
+## Minimal provider adapter contract
 
-The application-owned interface should conceptually support:
 - inspect(file) → page count/classification/metadata;
-- extract(file, config, idempotency key) → structured records with source page/region references;
-- validate_response(response) → validated schema and safe errors;
-- normalize(candidate, locale/context) → canonical rows plus normalization provenance;
-- classify_rows(records) → item/section/note/subtotal/total/adjustment;
-- propose_formulas(records, confirmed mapping) → formula candidates with provenance;
-- validate(records, formulas, printed totals) → issues and deltas;
-- assess_billable_pages(records, export manifest) → billable flags/reason codes;
-- export(approved records, formula contract) → XLSX artifact.
+- extract(file, config, idempotency key) → structured records with source-page/region provenance;
+- validate_response(response) → validated schema/safe errors;
+- normalize(candidate, locale/context) → canonical rows and normalization provenance;
+- classify_rows(records) → work item/section/note/subtotal/total/adjustment;
+- propose_formulas(records) → formula candidates with provenance;
+- validate(records, formulas, printed totals) → issues and differences;
+- export(records, formula contract) → XLSX plus manifest;
+- verify_export(artifact, manifest) → structure/recalc/error/provenance validation;
+- assess_billable_pages(manifest, policy version) → billable flags/reason codes.
 
-The interface is replaceable architecturally, but the initial deployment must not silently substitute providers.
+This is one application-owned interface, not a requirement to deploy separate services for each function.
 
 ## Provider policy and retries
 
-- **Provider:** Reducto Deep Extract only.
-- **Excluded:** LlamaExtract and Pulse Ultra 2 are not runtime dependencies and not fallback providers.
-- **No hidden fallback:** if Reducto fails or its cost/quality limits are reached, fail clearly or ask for user action; do not switch provider automatically.
-- **Retry:** bounded, only for classified transient network/server/timeout errors; use request/job idempotency; maximum retry policy is configurable and observable. Do not repeatedly retry invalid files, schema errors, authentication failures or permanent provider rejections.
-- **Meter every attempt:** provider page/credit usage, endpoint, request ID, retries, status, latency and estimated/reported cost.
-- **Customer charge:** based only on final billable source pages in a delivered XLSX, never number of provider calls or attempts.
-- The assumed 20% retry overhead in planning is a modeling assumption to check against logs, not the prescribed retry count and not a guarantee.
+- **Provider:** Reducto Deep Extract only for initial runtime.
+- **No hidden fallback:** provider failure, quality issue or cost limit produces a clear retry/failure path; never silently switch to an excluded paid provider.
+- Retry only transient transport/server/timeout failures with a small configured attempt limit and stable request/job idempotency key. Never endlessly retry invalid file, auth, schema or permanent provider errors.
+- Record each attempt separately, including endpoint/config version, request ID, usage unit/quantity (page vs credit), status, retry reason, latency and provider-reported cost when available.
+- Customer billing is based on final substantive exported pages, never provider attempt or credit count.
+- The planning assumption of a 20% retry overhead is not the retry limit or verified COGS.
 
-## Reliability and errors
+## Job lifecycle, cancellation and recovery
 
-- Every job/run has durable IDs and versioned configuration.
-- Idempotent retries must not duplicate exports or charges.
-- A failed stage produces a stable error code and safe diagnostic summary.
-- Partial results can be exported only if product marks the result as completed-with-warnings and discloses limitations; charge only pages represented by the usable delivered artifact.
-- Export failure means no deliverable and zero customer page charge.
-- File processing is resource-limited and uses durable background jobs where request duration/size demands it.
-- Do not execute embedded content or expose untrusted content as trusted UI markup.
+- The persisted job state in Supabase is the source of truth; queue delivery can be at least once.
+- A worker checks job state/idempotency before external calls, artifact writes and settlement. Duplicate queue deliveries do not re-run completed work or create another charge.
+- Only guarded transitions can move a job among queued/processing/review_required/completed/failed/canceled/expired. A terminal job cannot be revived by a late worker.
+- If a durable queue is required by runtime limits, use one Cloudflare queue/consumer pattern with bounded retries. Add a DLQ only if operations need actionable recovery; do not add a separate orchestration system.
+- If retries are exhausted, mark failed with a safe error and release reservation once after confirming no valid artifact/active worker remains.
+- Cancellation before work starts atomically marks canceled and releases the reservation. During in-flight provider work it is best-effort; prevent new attempts and do not release until a guarded state proves no artifact/charge can still commit.
+- A maintenance/recovery task handles stalled jobs only after the active worker lease/runtime has expired; it atomically terminalizes the job and releases the hold once.
+- A review-required hold has a bounded configurable expiry visible to the user. Expiry cannot race with a late worker into a terminal job charge.
+- No verified artifact means zero charge. If a verified, disclosed partial workbook exists, charge only substantive source pages represented in that artifact.
 
 ## Confidence and formula policy
 
-Confidence is at field/row level. Unknown fields remain null. Printed amounts are source evidence, not formulas. Ambiguous locale, OCR or column mapping triggers review. Tax/overhead/profit are not inserted unless calculation structure is explicit/confirmed.
+Confidence is tracked at field/row level where available. Unknown fields remain null. Printed amounts are source evidence, not formulas. Ambiguous locale, OCR or column mapping triggers warning/review. Tax/overhead/profit are not inserted unless rules are explicit or user-confirmed.
 
 ## Revision handling
 
-Treat every uploaded revision as an independent source document/job unless a future version-comparison feature explicitly links them. Never overwrite previously confirmed data silently.
+Treat each uploaded revision as an independent job unless a future version-comparison feature explicitly links them. Never overwrite source or previously generated artifacts silently. Regenerate a new artifact version within the same job; do not duplicate the job charge.
