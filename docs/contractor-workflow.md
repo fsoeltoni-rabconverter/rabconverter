@@ -1,151 +1,157 @@
-# Contractor Workflow and Manual Re-entry Inventory
+# Contractor Workflow and Manual Re-entry Inventory — Indonesia
 
-Status: Research synthesis / draft  
-Primary market: Indonesia, with workflow patterns cross-checked against international construction estimating sources.
+Status: Research synthesis v2 (evidence quality and product focus updated 2026-10-25)  
+Primary market: Indonesian contractors and estimators. This is a public-source synthesis, not a statistically representative survey.
+
+## Product anchor
+
+The focused workflow for RabConverter is: receive PDF RAB → upload → extract and classify rows → inspect exceptions → reconstruct safe Excel formulas → download XLSX.
+
+The full tender process provides context, but RabConverter is not initially a tender CRM, drawing takeoff engine, price database or submission portal.
 
 ## End-to-end workflow
 
-### A. Opportunity arrives
-The contractor receives an invitation, referral, procurement notification, RFQ or tender link.
+### A. Opportunity and documents arrive
 
-Facts captured or copied:
-- Client/owner/general contractor and contact person.
-- Project name, location, project/tender reference.
-- Scope/trade/package and contract type.
-- Date received, site visit/pre-bid meeting date, question deadline, bid deadline and timezone.
-- Submission mechanism, required file formats, naming rules and copies/originals.
-- Bid/no-bid status, estimator owner and internal due date.
+The contractor receives an offer, RFQ, invitation, RAB/BOQ, drawing package or tender notice from a client, project owner, consultant, government procurement portal or general contractor.
 
-These facts often live first in email/chat/portal, then in a bid tracker, calendar and job folder. RabConverter should extract a small subset into project metadata, but it is not initially a bid CRM.
+Common places the data appears:
+- Email, WhatsApp, procurement portal or shared drive.
+- PDF tender package or RAB attachment.
+- A separately supplied Excel BOQ, sometimes without rates.
+- Prior company RAB/price workbook used as a starting point.
 
-### B. Package is collected
-Likely files include:
-- Invitation to bid / RFQ / tender notice.
-- Unpriced BOQ / Daftar Kuantitas dan Harga / bill schedule, often XLSX or PDF.
-- RAB or engineer's estimate where provided.
-- Drawings (PDF, CAD exports or images).
-- Technical specifications and general requirements.
-- Addenda, revised drawings and clarification responses.
-- Instructions to bidders, contract conditions, preambles and scope of work.
-- Bid form, price schedule, proposal form and required declarations.
-- Supplier/subcontractor quotations, wage/productivity assumptions, tax/insurance/bonding information.
-- Qualification, company profile, past project, licensing, tax and other administrative attachments where required.
+Project facts that may be copied into the working file:
+- Client, project name and project location.
+- Tender/package number and work scope.
+- Received date, bid deadline, clarification deadline and site visit.
+- Source document issue date, revision and addendum number.
+- Contact person and requested submission format.
 
-The exact package varies. Do not require every item as a prerequisite for parsing a simple BOQ.
+These are useful metadata but the first MVP should not expand into a general opportunity tracker.
 
-### C. Register documents and establish revision
-The user sorts files into folders or spreadsheet rows and confirms whether a new file supersedes an old one.
+### B. Determine what kind of PDF was received
 
-Data to record:
-- Original filename, file type, size, upload time and checksum.
-- Document title/type, issue date, revision/addendum number.
-- Related project and source/version relation.
-- Page/sheet count and parser status.
-- Duplicate/similar file indicator.
-- Potential conflict or missing file indicator.
+This matters to product behavior:
+1. Born-digital/text PDF: text can be selected/copied; table geometry may be recoverable.
+2. Scanned/image PDF: page is an image; OCR and layout interpretation are needed.
+3. Mixed PDF: some pages contain digital text and others are scans.
+4. PDF containing a flattened spreadsheet printout: visual cell grid may be clear, but original Excel formulas, cell links, hidden sheets and workbook structure are normally absent.
 
-Important risk: the estimator prices a superseded BOQ or misses an addendum. The app should flag rather than choose a conflicting version silently.
+The UI should identify the document class and explain the expected fidelity rather than making all files appear equally easy.
 
-### D. Review scope and bid requirements
-Estimator reads scope, drawings, specifications, finish/schedules, notes and bid instructions; identifies covered trades, exclusions, alternates, provisional sums, units, quality/installation requirements and compliance items.
+### C. Extract the RAB/BOQ structure
 
-Possible information currently retyped:
-- Scope category / division / trade.
-- Work item code and description.
-- Specification references, drawing/sheet/detail.
-- Included/excluded status, alternates/options, allowance/provisional status.
-- Clarifications, assumptions and exceptions.
-- Mandatory submission attachments and form fields.
+Likely table fields:
+- Item number/code.
+- Work-item description.
+- Unit (e.g. m, m², m³, kg, unit, ls; retain source spelling).
+- Quantity/volume.
+- Unit price.
+- Amount/total.
+- Section/work group.
+- Subtotal and carried total.
+- Recap/tax/overhead/profit/contingency fields if printed.
+- Source page, table region and detected row type.
 
-The MVP can retain extracted text and source references; human review remains necessary for interpretation.
+Common difficult content:
+- Multi-line descriptions, indented subitems and work breakdown codes.
+- Section headings with blank numeric columns.
+- Repeated page headers, footers and page numbers.
+- Tables continuing over page breaks.
+- Merged cells and rules drawn as lines rather than cell borders.
+- Indonesian numeric conventions, including thousands separators and decimal commas.
+- Currency symbols, unit symbols, apostrophes and superscripts.
+- Rows with quantities but no unit price; blank amounts; dash or “nihil”.
+- Printed subtotals, total carried forward, recap pages, tax and overhead lines.
+- OCR confusion between 0/O, 1/I, 5/S, comma/period, 8/3, and unit abbreviations.
+- Low-resolution, rotated, skewed or photocopied pages.
 
-### E. Extract or measure quantities
-There are two materially different paths:
+### D. Recreate a usable Excel sheet
 
-**Path 1 — client provided BOQ/Daftar Kuantitas dan Harga**
-The source already contains line items and sometimes quantities. This is the highest-value first path for eliminating retyping. Extract section structure, codes, descriptions, units, quantity, existing rates/amounts, formula information and row order. Keep blank cells blank.
+This is the principal repeated-entry pain:
+- Manually retype every line item into Excel.
+- Align item codes, descriptions, units and quantities with the correct columns.
+- Recreate section headings, numbering, borders and subtotal rows.
+- Re-enter rate and amount data.
+- Rebuild formula relationships so a changed quantity or price updates the amount.
+- Re-create subtotal and final total formulas.
+- Recalculate and compare the workbook total with the printed PDF.
+- Move figures from the working sheet into the customer's prescribed workbook/template if needed.
 
-**Path 2 — no usable BOQ; only drawings/specifications**
-A quantity takeoff must be measured or reasoned from drawing geometry, schedules, details and construction rules. This is a separate and more difficult feature involving measurement calibration, geometry, assumptions and expert validation. Do not claim it is solved by extracting tables.
+A visually similar output is not enough if every cell is plain text or totals never update. Conversely, a formula-bearing workbook must not invent the source's hidden calculation logic.
 
-Potential manual work in either path:
-- Copy descriptions and item codes from PDF or prior Excel.
-- Type numbers/units into a preferred template.
-- Split or combine rows to match the contractor's cost code structure.
-- Repeat item data by floor, area, building, phase, type or material.
-- Recalculate totals when quantities or drawings are revised.
-- Trace every disputed quantity back to a drawing/specification.
+### E. Price, adjust and use the result
 
-### F. Apply rates and build up prices
-For each BOQ item, the contractor applies company rates, AHSP/AHS breakdowns, supplier quotes, labour/productivity, equipment, waste and location/conditions.
+After conversion, users may:
+- Change quantities or rates.
+- Reuse their company rates.
+- Compare the source RAB with their own cost structure.
+- Add, remove or split work items.
+- Recalculate section totals and final totals.
+- Copy structured rows into a client template.
+- Share a working XLSX with a QS, estimator, client or colleague.
 
-Potential manual work:
-- Map client item codes/descriptions to internal cost codes or an item library.
-- Find/edit unit rates.
-- Enter material, labour, equipment and subcontract cost components.
-- Adjust transport/freight, tax, overhead, profit, contingency and risk as relevant.
-- Copy supplier/subcontractor quotes into bid recaps.
-- Separate base bid from alternate/options/provisional items.
-- Maintain quote validity, supplier identity and inclusions/exclusions.
+Later product opportunities include template mapping, quote comparisons, version differences, an internal price book and AHSP/AHS analysis. They are not part of the first conversion promise.
 
-RabConverter's first release should not infer “correct market price” from description alone. Price suggestion/library integration is later scope; user-provided rates and explicit import are safer first.
+### F. Verify before relying on it
 
-### G. Reconcile, review and approve
-Before submitting, estimator/manager checks:
-- All sections/items present; no unintended omissions or duplicated rows.
-- Codes, descriptions, units and quantities.
-- Unit-price and amount calculations and rounding.
-- Subtotals, carried totals and final recap.
-- Tax, overhead, profit, allowances/provisional sums and alternates.
-- Source revision/addenda and specification notes.
-- Quote coverage, exclusions, clarifications, schedule assumptions and required attachments.
-- Correct output template, project identity, due date and delivery channel.
+Contractors should be able to check:
+- All printed item rows are present and in original order.
+- The value in each column matches the PDF.
+- Description wraps have not moved into neighboring rows.
+- Units and numeric formats have not been silently changed.
+- Formula-derived line totals equal the printed amounts or are flagged.
+- Subtotals/grand totals reconcile under an explicit rule.
+- Blank prices remain blank and are not mistaken for zero.
+- Sections, exclusions, alternates and provisional sums remain distinguishable.
+- The export is editable and opens/recalculates in common spreadsheet software.
 
-RabConverter can automate mechanical checks and highlight differences, but must not approve a bid or alter an amount silently.
+## Pain points, observed signals and evidence strength
 
-### H. Produce and submit the deliverable
-Possible outputs:
-- Priced BOQ/Daftar Kuantitas dan Harga.
-- RAB with section totals and recap.
-- Price proposal/quotation/letter of offer.
-- Tender forms and supporting qualification attachments.
-- Supplier/subcontractor quote recap (internal).
-- An editable XLSX plus a PDF rendering when requested by the client.
+| Pain / desired outcome | Public evidence observed | Strength / caveat | Product response |
+|---|---|---|---|
+| Avoid typing and formatting PDF data into a spreadsheet | Adobe Acrobat and PDF4me market their PDF-to-Excel flow around reducing manual entry and rebuilding editable tables. | Strong evidence of the general job-to-be-done; vendor claims, not independent contractor testimony. | Upload-first conversion, editable table output. |
+| Need formulas, not just printed numbers | RunConvert's PDF-to-Excel FAQ explicitly says PDFs do not contain active formulas, so converted files contain displayed values, not source formulas. Indonesian RAB Excel tutorials describe quantity × unit price, SUM, SUMIF, IF and lookup formulas as useful. | Technical fact plus tutorial evidence; not proof all users insist on formulas, but it directly matches the stated product requirement. | Reconstruct and label formulas, compare outputs to printed values. |
+| Fast/easy, not a complex tool | Public Facebook group search result explicitly asks for an RAB app that is “free and easy to learn/use.” | Search snippet for a public post; full post was not independently available through the web reader, so treat as a weak directional signal only. | Minimal upload → result flow, no setup-heavy dashboard. |
+| Editable deliverable rather than a static PDF or image | Indonesian RAB products/service pages promote Excel that remains editable and formula-bearing, including export and price breakdown. | Evidence of market expectation as expressed by providers, not proof of purchase/retention. | Download real XLSX with cells and formulas, not image or values-only sheet as default. |
+| Need totals to update after changing a quantity/rate | Indonesian RAB education materials and Excel product pages show formulas for amount and recap; RAB products advertise automatic recalculation. | Supported by established spreadsheet workflow; qualitative, not quantified as a complaint. | Formula generation plus recalculation tests. |
+| Numbers should be auditable and trusted | RAB services/products emphasize per-item calculations, review, source assumptions, versioning and traceability. | Mostly vendor positioning. Plausible high-consequence requirement because errors affect bids, but impact magnitude not quantified here. | Provenance, warning sheet, source-vs-calculated comparison and no silent correction. |
+| Price and accessibility may matter | Public social post requests free/easy RAB software; low-friction PDF converters also advertise no-account conversion. | One public request and vendor positioning cannot establish willingness to pay or a target price. | Remove unnecessary onboarding; evaluate a generous free tier after measuring processing cost. |
+| Multiple local templates / AHSP contexts exist | Government/open data from Satu Data Sumbar describes a Bina Marga BOQ workbook containing price recap, Daftar Kuantitas dan Harga and AHSP; Jateng's 2024 AHSP guidance says values need adjustment to local market/technical context. | Public dataset metadata and regional guidance; not a full survey of template variation. | Template-aware handling; never impose one formula/price/tax logic universally. |
+| Drawing takeoff is expensive and error-sensitive | Specialist services and takeoff vendors describe manual volume measurement as time-consuming and use professional review. | Mostly vendor statements. Relevant to wider workflow but outside the first PDF-RAB conversion scope. | Defer drawing measurement; don't imply a PDF table converter measures drawings. |
 
-Values may be copied from a working workbook into a client's “official” template or entered into a portal. The MVP should export clean spreadsheet data and, where feasible, map it back into a known template. Portal submission and legal signatures remain out of scope.
+## Re-entry inventory, ranked for RabConverter
 
-### I. Award, handoff and internal budget
-If selected, the estimate may be handed to operations/procurement, converted into internal RAP, purchase schedules and cost control baselines. RAP is a related downstream artifact, not interchangeable with the tender BOQ or RAB. Defer this workflow until core import/export is reliable.
+| Priority | Information to reconstruct | Source | Required behavior |
+|---|---|---|---|
+| P0 | Code/number, description, unit, quantity | PDF RAB/BOQ | Exact extraction where readable; preserve raw text and row order |
+| P0 | Unit price and printed amount | PDF RAB/BOQ | Extract independently; do not assume amount can replace a missing rate |
+| P0 | Section/group and subtotal/total rows | PDF layout/text | Classify row type and preserve hierarchy |
+| P0 | Formula for amount | Interpreted quantity/rate columns | Generate only if column semantics are confidently mapped; label as reconstructed |
+| P0 | Section subtotals and grand total | PDF recap | Generate only with clear membership rules; reconcile with printed values |
+| P0 | Page reference and extraction confidence | PDF | Retain source location, warning and confidence where available |
+| P1 | Tax/overhead/profit/contingency | PDF recap or explicit confirmed setting | Recreate only when base and rate/order are clear; otherwise keep as source values and flag |
+| P1 | Indonesian decimal/thousands convention | PDF text/layout | Detect and confirm when ambiguous |
+| P1 | Source document identity/date/revision | Cover page/file metadata | Capture as metadata and warn on conflicting versions |
+| P1 | Table-to-client workbook mapping | PDF plus known template | Later feature; require explicit supported template map |
+| P2 | AHSP breakdown/resource coefficients | AHSP pages/workbook | Later feature, with edition/source/location provenance |
+| P2 | Supplier quotations | PDF/email/XLSX | Separate workflow; quote coverage and validity must remain explicit |
+| P3 | Submission to tender portal | Portal | Out of MVP |
 
-## Re-entry inventory, prioritized
+## Market research limitation
 
-| Priority | Data copied repeatedly | Typical origin | Typical destination | Candidate automation |
-|---|---|---|---|---|
-| P0 | Item code, description, unit, quantity | Client BOQ XLSX/PDF | Contractor RAB/estimate workbook | Parse, normalize and export |
-| P0 | Unit rate, line amount, section subtotal | Existing cost sheet / priced BOQ | Contractor template | Preserve/import; validate arithmetic |
-| P0 | Project name/reference/client/location/dates | Invitation, cover page, email | Job header, filename, output form | Candidate extraction + confirmation |
-| P0 | Section hierarchy and line ordering | BOQ or tender template | Output workbook | Preserve hierarchy/order |
-| P0 | Repeated header/footer and page breaks | PDF | Structured table | Detect and remove only with traceable rules |
-| P1 | Addendum/revision and source-sheet/page | Tender package | Document register, QA report | Metadata comparison and warnings |
-| P1 | Cost codes / AHSP codes / category | Client list or internal catalog | Estimate categories | Match candidates, require user confirmation |
-| P1 | Alternates, provisional sums, inclusions/exclusions | Bid instructions/BOQ | Separate output sections and bid notes | Extract flags and source snippets |
-| P1 | Formula and recap values | Spreadsheet | Recalculated workbook | Formula inspection, recalculation and reconciliation |
-| P1 | Supplier/subcontract quotes | Emails/PDF/XLSX | Quote comparison spreadsheet | Later extraction flow; keep separate from BOQ MVP |
-| P2 | Company profile, licenses, tax, project history | Company archive | Tender admin forms | Later reusable profile/fill workflow |
-| P2 | Material/labour/equipment build-up | AHSP/AHS and internal rates | Unit-price analysis/RAB | Later cost library, versioned by source/context |
-| P2 | Drawing quantities | Drawings/specifications/schedules | Takeoff and BOQ | Separate high-validation measurement product phase |
-| P3 | Submission portal entry and signatures | Bid package | Client/portal | Out of MVP |
+Social media is unevenly indexed and public posts may be login-gated. In this pass, search surfaced one clear request for an easy/free RAB application and several product/tutorial sources, but not enough accessible independent contractor posts to quantify prevalence or rank complaints statistically. We therefore treat social signals as qualitative leads, not as a representative survey or a reason to invent demand metrics.
 
 ## Product wedge
 
-The strongest first wedge is **document-to-spreadsheet conversion of a provided BOQ/RAB**, not an “AI that makes an accurate RAB from any plan.” It targets the exact repeated clerical task, is easier to validate, and can be demonstrated using source-vs-export comparisons.
+“PDF RAB in, editable Excel with working formulas out.” Unlike a generic PDF converter, RabConverter should understand common Indonesian RAB columns and row types, create safe derived formulas, flag mismatches against the printed PDF, and keep uncertain values visible.
 
 ## Open validation questions
 
-1. Which source format should be the first golden path: Excel BOQ, text-based PDF BOQ, or both?
-2. Which 1–3 common Indonesian template families need round-trip export first?
-3. Do first users usually receive unpriced BOQ, a full PDF package, a screenshot/photo, or a mix?
-4. Is preserving the client's original template more valuable than producing a clean normalized workbook?
-5. Which AHSP edition/client-specific pricing fields frequently appear in the target workflow?
-
-These questions can be resolved initially through public examples and document samples; no user interview is a prerequisite to writing down the workflow.
+1. What percentage of user PDFs are born-digital vs scanned?
+2. Do users most often upload contractor RAB, public tender BOQ, or consultant cost estimates?
+3. Which first layouts are most common: Uraian/Volume/Satuan/Harga Satuan/Jumlah or more complex schedules?
+4. Which recap formulas vary most by client or sector?
+5. Does a good first XLSX need to resemble the PDF visually, or is a clean normalized workbook sufficient?
+6. What page volume and acceptable turnaround will users expect in a no-account first conversion?
