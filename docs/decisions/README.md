@@ -1,77 +1,86 @@
 # Decision Log
 
-This log records decisions that affect product behavior, data contracts, cost and infrastructure. The status describes whether the decision is approved for the MVP baseline, not whether it has already been implemented.
+This log records decisions that affect product behavior, data contracts, cost and infrastructure. “Approved” means approved for the MVP baseline, not implemented or launched.
 
 ## DEC-001 — Formula-bearing XLSX from PDF RAB is the MVP
 
-- Status: Approved
-- Date: 2026-10-25
-- Decision: Focus the MVP on PDF RAB/BOQ extraction, row review, safe formula reconstruction, comparison to printed values and XLSX download.
-- Constraint: A PDF normally does not preserve the original workbook formula graph. Generated formulas must be labelled reconstructed.
-- Consequence: Drawing takeoff, authoritative market pricing, portal submission and exact workbook recovery are out of scope.
-- References: product-definition.md, contractor-workflow.md, export-specification.md.
+- Status: Approved.
+- Decision: Focus on PDF RAB/BOQ extraction, safe formula reconstruction, comparison to printed values and XLSX download.
+- Constraint: A PDF normally does not preserve the original workbook formula graph. Generated formulas are reconstructed.
+- Non-goals: drawing takeoff, authoritative market pricing, portal submission and exact workbook recovery.
 
-## DEC-002 — Use remove.bg only as an interaction-simplicity reference
+## DEC-002 — remove.bg is an interaction-simplicity reference only
 
-- Status: Approved
-- Date: 2026-10-25
-- Decision: Use the focused upload → process → review as needed → download loop; do not copy brand assets or claim affiliation.
-- Consequence: Conversion is the primary loop; complex dashboards are deferred.
+- Status: Approved.
+- Decision: One main upload action, automatic processing, result-first download and focused questions only for material ambiguity.
+- Consequence: No prerequisite dashboard, full-document review or page per backend stage. Do not copy remove.bg technology, assets or business model.
 
-## DEC-003 — Cloud-only development workflow
+## DEC-003 — Cloud-only workflow and minimal architecture
 
-- Status: Approved
-- Date: 2026-10-25
-- Decision: GitHub is the source of truth, GitHub Actions runs CI, Cloudflare is the intended app/preview host, and Supabase is the intended data/auth/private-storage platform where needed.
-- Consequence: Previews must be real and inspectable before release; this architecture is not evidence of an existing deployment.
+- Status: Approved for target architecture; implementation absent.
+- Decision: GitHub is source of truth; GitHub Actions for deterministic CI; Cloudflare as intended web/API host and durable queue only if runtime limits require it; Supabase Auth/Postgres/Storage for ownership, durable job state, wallet/ledger and private files.
+- Consequence: Avoid additional services unless a tested limit requires them. The database/job state is authoritative; a queue is delivery machinery, not a second state store.
 
-## DEC-004 — Reconstructed formulas must be traceable
+## DEC-004 — Reconstructed formulas must be traceable and verified
 
-- Status: Approved
-- Date: 2026-10-25
-- Decision: Preserve printed amounts separately from formula/results, label provenance, and flag mismatches instead of silently replacing source values.
-- Consequence: Formula correctness, recalculation and reconciliation are release-blocking tests.
+- Status: Approved.
+- Decision: Preserve printed values separately from formulas/results, record provenance, recalculate formulas using a tested engine and flag mismatches.
+- Consequence: A valid file that opens is not by itself proof of a valid formula-bearing workbook. Formula/recalculation failures block a success-ready artifact unless fixed.
 
-## DEC-005 — Reducto Deep Extract is the sole initial extraction provider
+## DEC-005 — Reducto Deep Extract is the sole initial provider
 
-- Status: Approved for MVP planning; production data gate remains open
-- Date: 2026-10-25
-- Decision: Use Reducto Deep Extract behind a server-side adapter as the only initial provider. Do not integrate LlamaExtract or Pulse Ultra 2 and do not use either as an automatic fallback.
-- Context: Public list price is shown as US$40 per 1,000 pages. Provider quality, account-specific cost and privacy terms must still be verified before launch.
-- Consequence: Provider failure produces a clear failure/retry path; no hidden switch to another paid provider. Record each provider attempt and actual usage/cost.
-- Gate: Validate account endpoint/API settings, data retention/training, region, DPA, latency, retry and rate card before processing customer documents.
-- References: processing-pipeline.md, security-and-data-handling.md, research-and-sources.md.
+- Status: Approved for MVP planning; provider/privacy/quality gates remain open.
+- Decision: Use Reducto Deep Extract only, through a server-side adapter. Do not integrate LlamaExtract or Pulse Ultra 2 or use them as automatic fallback.
+- Context: Public Standard list price currently lists US$40/1,000 pages, but extra per-field cost may apply and account usage may use specific units/terms.
+- Consequence: Verify exact endpoint/account plan, usage unit/export, rate card, retention/training, region and DPA before customer data. Measure COGS from actual account logs/invoices, not list estimates or free credits.
 
 ## DEC-006 — Initial retail price and minimum top-up
 
-- Status: Approved commercial baseline for MVP planning
-- Date: 2026-10-25
-- Decision: Charge Rp2.500 per billable page; minimum top-up is Rp50.000; currency is IDR.
-- Consequence: Estimate/max price appears before processing; final charge is based on page assessment after an XLSX is generated.
-- Non-goal: Do not treat list COGS, free credits or a planning FX assumption as verified profit.
-- References: pricing-and-billing.md, user-experience.md, acceptance-criteria.md.
+- Status: Approved commercial baseline for MVP planning.
+- Decision: Charge Rp2.500 per billable page; minimum wallet top-up Rp50.000; currency IDR.
+- Consequence: Show maximum estimate before paid processing; final charge follows substantive page assessment after a verified XLSX.
+- Non-goal: minimum top-up is not minimum job fee; list COGS/retry/FX assumptions are not verified profit.
 
-## DEC-007 — Billable page and no-charge failure rule
+## DEC-007 — Substantive billable page and no-charge failure rule
 
-- Status: Approved commercial baseline for MVP planning
-- Date: 2026-10-25
-- Decision: A page is billable only when it contributes meaningful identifiable RAB/BOQ content retained in a successfully generated XLSX. Blank, cover-only, unrelated, drawing-only, duplicate-with-no-new-content and failed/no-usable-data pages are not billable.
-- Decision: If no XLSX deliverable is produced, charge zero and release any reservation. Retries do not create extra customer charges.
-- Consequence: Provider usage and customer billable pages must be measured separately.
-- References: pricing-and-billing.md, document-taxonomy.md, canonical-data-model.md.
+- Status: Approved commercial baseline.
+- Decision: A page is billable only if it contributes substantive identifiable RAB/BOQ content (an actual work row or meaningful subtotal/recap with value/context) retained in a verified downloadable XLSX and traceable to the source page.
+- Excluded by themselves: title/section heading, header/footer, notes/specification, cover, blank, unrelated, drawing-only, failed/unreadable and duplicate-with-no-new-record.
+- Decision: No verified deliverable means charge Rp0 and reservation release. Retries are never additional customer charges.
+- Consequence: Export manifest and final page assessment must reconcile; provider usage is measured separately.
 
-## DEC-008 — Payment gateway remains unselected; QRIS preferred for evaluation
+## DEC-008 — Payment gateway remains unselected; QRIS is preferred for evaluation
 
-- Status: Pending provider selection
-- Date: 2026-10-25
-- Decision: Do not describe a gateway as integrated. Select one after checking QRIS support, transaction fees, verified webhooks/callbacks, idempotency, expiry, settlement, refund and reconciliation.
-- Consequence: Payment integration and production top-ups are blocked until vendor/contract and callback behavior are verified.
-- References: pricing-and-billing.md, security-and-data-handling.md, acceptance-criteria.md.
+- Status: Pending vendor selection.
+- Decision: Do not describe any gateway as integrated. Select after QRIS, fees, verified callbacks, event ordering, expiry, settlement, refund and reconciliation are assessed.
+- Consequence: Payment/production wallet remains blocked until callback verification and idempotency are tested.
 
 ## DEC-009 — Documentation-only state must be reported accurately
 
-- Status: Approved
-- Date: 2026-10-25
-- Decision: The repository contains documentation but no verified RabConverter application preview. The connected Cloudflare account had no Worker scripts/Pages projects, and the active Supabase project's public schema had no tables at inspection.
-- Consequence: Do not state that app, provider, billing or payment API is live until code and deployment are inspected.
-- References: architecture.md, root README.md.
+- Status: Approved.
+- Decision: The repository has documentation but no verified running application/preview. The connected Cloudflare account had no RabConverter Worker/Pages resources and the active Supabase public schema had no tables at inspection.
+- Consequence: Never claim app/provider/payment/CI is live without direct evidence; recheck dated infrastructure snapshots before release.
+
+## DEC-010 — Identity boundary and owner-scoped file storage
+
+- Status: Approved for MVP.
+- Decision: Basic preflight may run before sign-in, but durable owner-scoped job/source storage, paid provider calls and wallet/payment actions require Supabase Auth identity. Guest wallet/paid jobs are out of MVP.
+- Consequence: If a temporary preflight upload cannot be safely bound to the signed-in user, ask the user to reselect it rather than exposing a public temporary URL.
+
+## DEC-011 — Payment verified and wallet credited are distinct states
+
+- Status: Approved.
+- Decision: Canonical top-up lifecycle separates paid (provider event verified) from credited (wallet-ledger credit committed exactly once). Duplicate/out-of-order callbacks are idempotent and only credited balance is spendable.
+- Consequence: Return to saved conversion context after credit, but require an explicit user click to start conversion.
+
+## DEC-012 — Finite reservations and terminal job states
+
+- Status: Approved for MVP planning.
+- Decision: Every job reservation and review hold has a bounded expiry. Cancellation, timeout, exhausted retries and no-result paths release holds exactly once. Terminal jobs cannot be revived or charged by late workers.
+- Consequence: Exact runtime/lease/hold expiry values are configuration decisions to finalize and test before paid launch, not hidden defaults.
+
+## DEC-013 — Canonical page assessment and immutable export versions
+
+- Status: Approved.
+- Decision: JobPageBillingAssessment is the canonical final billability record tied to an exact export manifest; any SourcePage.billable value is a projection only. Every artifact version is immutable. Re-export within a job does not create a second job charge.
+- Consequence: Any legitimate post-settlement billing adjustment is an audited compensating ledger entry, never silent historical rewriting.
