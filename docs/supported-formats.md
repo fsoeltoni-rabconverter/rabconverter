@@ -1,51 +1,48 @@
 # Supported Formats and Golden Test Matrix
 
-Status: proposed; not yet a compatibility promise
+Status: proposed; compatibility promises must follow measured tests.
 
-## Proposed starting set
+## Initial input priority
 
-| Format | Initial target | Notes |
+| Format | First release position | Notes |
 |---|---|---|
-| XLSX | Primary | Native rows/sheets/formulas/cell types/merged regions matter; preserve formulas and source addresses |
-| Text-based PDF | Primary | Extract tables with source page/position; detect repeated headers and split tables |
-| CSV | Interchange | Require explicit or detected delimiter, encoding and decimal/number locale where ambiguous |
-| XLS (legacy Excel) | Pending test | Requires a safe compatible parser or conversion path |
-| Scanned PDF | Limited/experimental initially | OCR errors and table geometry can create false quantities; review required |
-| JPG/PNG scans/photos | Limited/experimental initially | No guarantee for handwritten or skewed/low-resolution text |
-| DOCX | Later | Useful for bid forms/specs; table extraction and clause analysis need separate criteria |
-| ZIP archives | Later | If added, block path traversal and unsafe file expansion; apply expanded-size limits |
-| DWG/DXF/CAD | Out of MVP | Requires specialized rendering/measurement semantics |
+| Text-based PDF RAB/BOQ | Primary golden path | Extract text and table layout; reconstruct safe formulas |
+| Scanned PDF RAB/BOQ | Limited/experimental until tested | OCR required; numeric fields need confidence and review |
+| Mixed text/scanned PDF | Limited until tested | Page-level classification and warnings |
+| XLSX/XLS source | Later companion input | If original workbook exists, native formulas are more authoritative than reconstruction from PDF |
+| CSV | Later/secondary interchange | Not the core PDF-to-XLSX user experience |
+| DOCX, email, ZIP | Later | Separate parsing and safety criteria |
+| CAD/DWG/DXF drawings | Out of MVP | Requires quantity takeoff semantics, not PDF RAB conversion |
+
+## Golden test suite
+
+Use samples with permission/licensing appropriate for testing:
+1. Clean text-based PDF RAB with Uraian/Volume/Satuan/Harga Satuan/Jumlah.
+2. PDF BOQ with blank rates.
+3. RAB with section headings and subtotals.
+4. PDF with separate recap page and printed total.
+5. PDF table continued across pages, repeating the header.
+6. Wrapped/multiline descriptions and continuation rows.
+7. Localized values with Indonesian thousands and decimal separators.
+8. Rows with zero/dash/blank amounts or missing unit prices.
+9. Tax/overhead/profit/contingency rows where calculation order matters.
+10. Scanned PDF, skewed/rotated pages and poor OCR quality.
+11. Multiple columns/pages or section subtotal carried forward.
+12. Corrupt, encrypted, mixed-content and unsupported PDF.
+13. Source with an intentional printed arithmetic mismatch.
+14. PDF that visually resembles an Excel sheet but has no embedded formula logic.
+
+For each fixture, define expected values, row count/kind, row order, source page, formulas that are safe to reconstruct, printed totals, expected warning codes and resulting workbook formulas/values.
 
 ## File validation
 
-At minimum validate:
-- Actual file signature/content rather than trusting extension alone.
-- Allowed media type and extension.
-- Size and page/sheet count limits.
-- Password/encryption state.
-- Parse safety and time/resource budgets.
-- Duplicate checksum within a job.
-- Empty or malformed document.
-- Dangerous embedded content/macros are not executed.
+- Check file signature/content, not extension alone.
+- Restrict size, page count, runtime and memory budget.
+- Identify encryption/corruption/empty documents.
+- Treat OCR or parser input as untrusted.
+- Do not execute embedded scripts/macros.
+- Preserve original privately and use checksum for deduplication.
 
-## Golden-file test suite
+## Acceptance metrics
 
-Create non-confidential fixtures that cover:
-1. Plain BOQ XLSX with one sheet.
-2. Multisheet BOQ with section headers and subtotal rows.
-3. Merged section headings, repeated print headers and page breaks.
-4. Formula totals with cached formula values.
-5. Localized Indonesian numeric formats (e.g. decimal commas and thousand separators).
-6. Blank rates with quantity and units populated.
-7. Priced BOQ with nontrivial amount values.
-8. Text PDF with a table that continues across pages.
-9. PDF with two-column or wrapped descriptions.
-10. Scanned PDF with rotated/skewed pages (only if OCR is supported).
-11. Invalid extension, corrupted file and encrypted file.
-12. Addendum with changed quantity/description.
-
-For each fixture, define expected item count, section hierarchy, raw and normalized values, source positions, formulas/cached totals, warning codes and export output.
-
-## Acceptance threshold
-
-Do not use one global accuracy score. Track field-level exact match for item code, unit, quantity, rate and amount; row precision/recall; hierarchy preservation; subtotal reconciliation; and false-positive/false-negative warnings separately. Numeric fields need stricter checking than descriptive prose. Define release thresholds from observed baseline on the golden set before enabling automated priced workbook generation.
+Use separate metrics for item code, description, unit, quantity, rate, printed amount, row-kind classification, table row precision/recall, formula correctness, subtotal/grand-total reconciliation and warning precision/recall. Numeric fields need stricter thresholds than prose. Set release targets after a baseline on a representative golden set; don't use one global “accuracy” number.
