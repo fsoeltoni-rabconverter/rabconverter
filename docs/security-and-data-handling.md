@@ -34,7 +34,8 @@ Reducto Deep Extract is the sole initial provider, but selecting it does not app
 - model training/service-improvement use of inputs/outputs;
 - processing/storage region, subprocessors, data transfer and applicable DPA/terms;
 - endpoint/configuration, limits, timeouts, retries and usage-metering unit;
-- current account pricing and usage export availability.
+- current account pricing and aggregate usage export availability;
+- provider job ID/request ID persistence and timeout/status-check semantics before retry.
 
 The public pricing page advertises zero-data-retention and EU/AU data residency as higher-tier features; do not assume Standard includes them. Keep real customer documents blocked until this privacy gate is approved. Use synthetic or licensed fixtures.
 
@@ -45,6 +46,7 @@ The public pricing page advertises zero-data-retention and EU/AU data residency 
 - Expect duplicate, delayed and out-of-order callbacks; persist unique provider event IDs and make processing idempotent.
 - Payment state paid means provider payment was verified; credited means the wallet ledger credit committed exactly once. UI exposes credited balance only after the ledger transaction completes.
 - Redirect URLs, client events and screenshots cannot mark an order paid/credited.
+- If the provider verifies payment after the local order expiry, mark `reconciliation_required`; reconcile the provider's final order/payment status before exactly-once credit or an explicit refund/reversal. Never auto-credit from the client or auto-start conversion.
 - Keep ledger immutable. Corrections use linked compensating entries with actor/reason. Do not store unnecessary raw card/QRIS secrets or callback payloads.
 
 ## Formula and source integrity
@@ -58,7 +60,7 @@ The public pricing page advertises zero-data-retention and EU/AU data residency 
 
 Before production, define retention/expiry for temporary preflight uploads, source PDFs, extracted rows, exports, provider-side data, payment events and security logs. A user deleting a job must remove source/derived files according to the published policy and provider contract; financial ledger and payment reconciliation records may require a separate lawful retention period. Do not promise complete account erasure until those obligations and provider deletion capabilities are reviewed.
 
-Reservation expiry/worker recovery must be implemented before paid launch. Expired/canceled jobs release holds once; late workers cannot revive or charge them. Keep enough safe metadata to reconcile ambiguous financial states without logging confidential document content.
+Reservation expiry/worker recovery must be implemented before paid launch. Expired/canceled jobs release holds once; late workers cannot revive or charge them. For each provider attempt, record provider job/request ID, attempt number, usage unit/quantity, status, retry cause, latency and reported cost/currency when available; redact secrets and document content. Check the existing provider job status before retrying a timed-out request. Keep enough safe metadata to reconcile ambiguous financial states without logging confidential document content.
 
 ## Incident response and release gates
 
