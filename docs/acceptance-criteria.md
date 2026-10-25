@@ -19,9 +19,10 @@ Status: draft v4. Release accuracy thresholds must be set from a representative 
 - LlamaExtract and Pulse Ultra 2 are absent from runtime dependencies and fallback logic.
 - Provider responses are schema-validated, source-page provenance is checked, payload size is bounded, and untrusted content is never rendered as executable markup.
 - Retries are limited to transient transport/server/timeout errors and share stable job/run idempotency keys. Permanent errors are not retried.
-- Every attempt records endpoint/config version, request ID, page/credit usage unit and quantity, status, latency, retry reason and reported/estimated cost when available.
+- On timeout, the existing provider job/request ID and status are checked before a retry; no blind duplicate provider job is created while the original may be running.
+- Every attempt records job/page scope, endpoint/config version, provider job ID/request ID, page/credit usage unit and quantity, status, latency, retry reason and reported cost/currency when available. Usage export/invoices are used for aggregate reconciliation; per-job attempt detail comes from RabConverter records.
 - Real customer documents are not sent until the account-specific Reducto privacy/retention/region/DPA/plan gate is approved.
-- Long processing is durable when required by actual provider/runtime limits. If Cloudflare Queues is used, at-least-once delivery is assumed and worker actions are idempotent; no second job-orchestration system is introduced.
+- Start without a queue unless measured runtime limits require one. If Cloudflare Queues is used, commit the database job and reservation first, dispatch after commit, and recover committed-but-undispatched jobs. Assume at-least-once delivery and idempotent worker actions; no second job-orchestration system is introduced.
 - Deterministic CI uses synthetic/permitted fixtures and mocks, never paid provider calls.
 
 ## 3. Extraction and formula reconstruction
@@ -44,7 +45,7 @@ Status: draft v4. Release accuracy thresholds must be set from a representative 
 - A verified workbook is valid/openable XLSX with editable cells, correct sheet contract, provenance, warnings and no unacceptable formula errors.
 - Eligible formulas recalculate in the selected supported calculation engine/spreadsheet environment. File-open validation alone is insufficient.
 - If formula recalculation or error inspection cannot validate the deliverable to the export contract, do not mark it successfully completed/download-ready.
-- Each export is immutable and versioned. Corrections before initial export remain in the same job. Regeneration after export creates a new artifact version; it does not create a second job charge.
+- Each export is immutable and versioned. Corrections before initial export remain in the same job. Regeneration after export creates a new artifact version in the same job and never creates a second customer job charge. If a confirmed post-settlement correction changes the amount, use an audited compensating ledger entry and preserve the original settled entry.
 - Export failure/no verified artifact leads to no success download, Rp0 charge and reservation release.
 
 ## 5. Billable-page tests
@@ -84,6 +85,7 @@ A page is billable only when it contributes a substantive, identifiable RAB/BOQ 
 - Only `credited` unlocks use of top-up balance.
 - Callback authenticity, amount, currency, order identity and event ID are verified on server. Provider event ID is unique.
 - Duplicate/out-of-order callbacks, callback-before-redirect, late callbacks and browser redirect-only signals never double-credit or falsely mark paid/credited.
+- A verified payment arriving after local order expiry enters `reconciliation_required`; it can only produce one verified wallet credit or an explicit refund/reversal, never browser-driven credit or automatic conversion start.
 - Credit, related ledger entry and state transition are atomic or recoverably idempotent; a persisted credit-pending state is not shown as credited until the ledger commit succeeds.
 - Failed/canceled/expired orders do not credit wallet; ambiguous states are `reconciliation_required`.
 - The user returns to the same conversion after verified credit but must explicitly select Konversi PDF; payment never automatically starts processing.
