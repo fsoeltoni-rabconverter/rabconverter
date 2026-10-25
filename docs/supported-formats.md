@@ -42,8 +42,12 @@ Use only examples with reuse permission, confirmed public license or intentional
 22. Provider output discarded and not represented in final artifact: non-billable.
 23. Warning-bearing but substantive retained row: billable if it meets the definition.
 24. Retry, duplicate submit, cancellation, job timeout, review hold expiry and late worker attempt: no duplicate charge and no reservation leak.
-25. Duplicate/out-of-order payment event, callback before redirect, verified payment before ledger credit, and repeated credit attempt: wallet credits once and conversion unlocks only after credited.
+25. Duplicate/out-of-order payment event, callback before redirect, verified payment before ledger credit, late verified payment after local expiry, and repeated credit attempt: wallet credits once only after reconciliation and conversion unlocks only after credited.
 26. Export with formula error/recalc failure: not success/download-ready; charge zero if no verified deliverable.
+27. Correction/re-export in the same job: new immutable artifact version, no second customer charge; if settled amount changes after a confirmed correction, append a compensating ledger entry.
+28. Provider timeout with saved job/request ID: check current provider job status before any safe retry; record all provider attempts.
+29. Optional queue dispatch failure after database commit: recover and dispatch the existing job/reservation without creating a duplicate.
+30. Provider COGS measurement: internal per-attempt records reconcile to aggregate provider usage exports/invoices; no assumed one-to-one attribution unless evidence confirms it.
 
 For every fixture, specify expected values, row kinds/order, source page, formulas, warnings, export-manifest records, page billability/reason, expected customer charge and simulated provider usage/cost.
 
