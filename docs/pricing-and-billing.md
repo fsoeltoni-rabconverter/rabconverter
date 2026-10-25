@@ -38,14 +38,14 @@ A page is not billable merely because the provider processed it, text was detect
 
 A page with a repeated header plus actual RAB/BOQ rows remains billable. A subtotal/recap page is billable only if it contains a substantive financial or quantity record that is retained in the XLSX; a label like “Subtotal” without a usable value/relationship is not sufficient. A warning does not itself make a page non-billable if substantive data is retained. Billability is not an accuracy guarantee.
 
-The same source page can be assessed only once per job. A new user-requested conversion is a new job, with a displayed estimate before it starts; regeneration/correction of an already charged job does not create a second page charge.
+The same source page can be assessed only once per job and artifact version. A new user-requested conversion is a new job, with a displayed estimate before it starts. Correcting or regenerating an artifact within the same job creates a new immutable artifact version and never creates a second customer job charge. If a confirmed correction changes the amount after settlement, append an audited compensating ledger entry; never rewrite the settled charge or its history.
 
 ## 3. Estimate, reservation and settlement
 
 1. **Preflight:** validate file signature/type, readability, encryption/corruption, configured size/page limits, and source page count. Preflight is not a paid provider call.
 2. **Estimate:** show all accepted source pages × Rp2.500 as the estimated maximum, current available wallet balance, and exact shortfall. Label it as a reservation ceiling—not a promise of final charge.
 3. **Explicit start:** only an authenticated owner can start paid processing. Server checks intent, job idempotency and sufficient available funds.
-4. **Atomic reservation:** create/lock the job and reserve the maximum in one database transaction. Concurrent jobs must not reserve more than the wallet can cover.
+4. **Atomic reservation:** create/lock the job and reserve the maximum in one database transaction. Concurrent jobs must not reserve more than the wallet can cover. A queue is not part of this transaction: do not add a queue unless tested runtime limits require it. If one is required, commit the job/reservation first, then dispatch; recover committed jobs that were not dispatched.
 5. **Process/export:** record provider usage separately. Verify the XLSX artifact is valid, readable, complete enough to offer, and satisfies the export contract before charge calculation.
 6. **Assess:** deterministically assess each source page using substantive records retained in the actual export manifest. Persist the classifier/policy version, reason code and artifact reference.
 7. **Settle once:** final customer charge = billable page count × the job's price snapshot. Commit the charge and release the unused reservation atomically.
@@ -90,7 +90,8 @@ Terminal/recovery states: `failed`, `canceled`, `expired`, `reconciliation_requi
 - Browser redirect, query parameter or user-uploaded payment screenshot is not proof of payment.
 - Pending or ambiguous states remain visible and do not start conversion. Do not create a replacement order automatically.
 - After **credited**, refresh the wallet and return to the same conversion context. Require the user to click **Konversi PDF**; do not auto-start paid work.
-- Failed/canceled/expired orders never credit the wallet. Mismatched or ambiguous provider events require reconciliation.
+- If a verified provider payment arrives after the local order has expired, move the order to `reconciliation_required`, verify it against provider-side order/payment status, and then either credit the wallet exactly once or follow the explicit refund/reversal path. Never credit from a browser redirect or unverified callback, and never auto-start conversion.
+- Failed/canceled orders never credit the wallet. Mismatched or ambiguous provider events require reconciliation; a late verified payment is the reconciliation exception above, not an automatic credit.
 - Reconcile the application ledger to the provider settlement report before production.
 
 Gateway fee, payout timing, tax treatment, refund process and provider-specific failure semantics remain pending until a vendor is selected.
@@ -118,6 +119,8 @@ Gateway fee, payout timing, tax treatment, refund process and provider-specific 
 
 ## 8. Provider usage and COGS
 
+For a timeout, first check the saved provider job/request ID and query the existing provider job status where the provider supports it. Persist provider job ID/request ID before retry decisions. Do not blindly create a second provider job while the first may still be running; retry only after status/semantics show the retry is safe and within the configured limit.
+
 Public Reducto Standard list pricing currently lists Deep Extract at **US$40 per 1,000 pages (US$0.04/page)**; dense extraction over 100 fields per page may incur additional charges, and pricing/terms can vary by account. See [Reducto pricing](https://reducto.ai/pricing) and [official usage/pricing reference](https://docs.reducto.ai/reference/credit-usage). This is a planning input, not a verified quote for the RabConverter account. The provider's account contract and actual usage export take precedence.
 
 Planning calculation only:
@@ -126,9 +129,9 @@ Planning calculation only:
 - Provisional 20% retry factor: approximately Rp866/page.
 - Use Rp900–Rp1.000/page as a planning reserve only until account usage and invoices/logs validate the actual distribution.
 
-At Rp2.500 retail, subtracting that reserve gives a **planning contribution estimate** of Rp1.500–Rp1.600 per billable page before all other costs; it is not net profit or measured margin. Payment processing, storage, compute, bandwidth, taxes, support, fraud/refunds and provider spend on non-billable pages are excluded.
+Do not publish or use a per-page contribution/profit estimate from these inputs. The Rp900–Rp1.000 amount is only a provisional provider-cost reserve, not measured cost, margin or profit.
 
-Record job, source page, endpoint/config version, provider request ID, attempt, usage unit (pages vs credits), usage quantity, status, retry cause, latency, cost/currency when available, customer billable flag/reason, price snapshot, final customer charge and export artifact ID. Do not infer provider COGS from customer billable pages.
+Record every provider attempt internally: job/source-page scope, endpoint/config version, provider job ID and request ID, attempt number, usage unit (pages vs credits), quantity, status, retry cause, latency, reported cost/currency when available, customer billable outcome/reason and artifact ID. Do not log secrets or raw document content. Use provider usage exports/invoices for aggregate reconciliation, not as a presumed per-job/per-attempt breakdown. Do not infer provider COGS from customer billable pages.
 
 ## 9. Unit-economics gates
 
