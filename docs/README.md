@@ -32,6 +32,11 @@ Dokumen ini adalah source of truth untuk produk, perilaku, data dan implementasi
 - Default identity contract: user dapat melihat preflight sebelum login; sebelum proses berbayar, identitas Supabase Auth harus tersedia. MVP tidak menyediakan saldo/top-up untuk guest.
 - remove.bg hanya benchmark UX, bukan teknologi/brand/model bisnis.
 - COGS, provider terms, payment vendor, dan infrastruktur harus disebut belum diverifikasi sampai evidence ada.
+- Koreksi/re-export pada job yang sama menghasilkan versi artefak baru yang immutable, bukan charge pelanggan kedua; penyesuaian setelah settlement hanya lewat compensating ledger entry yang diaudit.
+- Queue tidak ditambahkan sebelum batas runtime membuktikannya perlu. Jika dipakai, job dan reservasi database harus commit sebelum dispatch, dengan recovery untuk job yang belum ter-dispatch.
+- Timeout Reducto harus memeriksa ID/status pekerjaan provider yang sudah ada sebelum retry agar tidak membuat pekerjaan provider ganda.
+- Pembayaran terverifikasi yang datang setelah order lokal kedaluwarsa masuk `reconciliation_required`; setelah verifikasi provider, lakukan credit tepat sekali atau jalur refund/reversal eksplisit, tanpa auto-start konversi.
+- Catat setiap percobaan provider secara internal; usage export/invoice provider dipakai untuk rekonsiliasi agregat. Rp900–Rp1.000/halaman hanya reserve COGS sementara, bukan kontribusi, margin, atau profit terukur.
 - Current repository state: documentation-only; no verified app preview or production flow.
 
 ## Implementation gates
