@@ -36,7 +36,7 @@ ID, source document ID, page number, classification, extraction method, provider
 ID, job ID, source document ID, run number/idempotency key, pipeline/config version, state, start/end time, safe error/summary. Avoid raw PDF text in summary JSON.
 
 ### ProviderUsageRecord
-ID, job/source page range, provider, endpoint/config version, provider request ID, attempt, idempotency/request key, usage unit (`page`, `credit`, or provider-specific unit), quantity, status, timestamps, latency, retry class, cost/currency if available and safe error code. Append each attempt; do not overwrite earlier attempt cost/status.
+ID, job/source page range, provider, endpoint/config version, provider job ID, provider request ID, attempt, idempotency/request key, usage unit (`page`, `credit`, or provider-specific unit), quantity, status, timestamps, latency, retry class, cost/currency if available and safe error code. Append every attempt; check a prior timed-out provider job's status before retrying, and do not overwrite earlier attempt cost/status. Provider exports/invoices reconcile aggregate spend; internal records provide per-job/attempt detail.
 
 ### BoqSection / BoqLineItem
 Keep section, work-item, note, subtotal, carry-forward, grand-total, adjustment and unknown row kinds distinct. Store row order, raw and normalized fields, printed amount, formula/result/provenance, confidence/review, source page/region and timestamps. Printed amount is never overwritten by reconstructed amount.
@@ -56,7 +56,7 @@ The source page's convenience flags/counts, if retained for queries, are read pr
 Wallet ID, owner user ID, IDR currency, cached available/reserved balances and version/lock token. Ledger entries contain signed integer amount, type (credit, charge, reservation, release, reversal/refund, approved adjustment), related job/order, idempotency key, linked reversal, actor/reason and timestamps. Original settled entries are immutable.
 
 ### TopUpOrder / PaymentEvent
-Order includes owner/wallet, requested amount (minimum Rp50.000), provider, provider order/reference, expiry, idempotency key, verified payment time and state: `created`, `pending`, `paid`, `credited`, `failed`, `canceled`, `expired`, `reconciliation_required`, optionally `refunded`.
+Order includes owner/wallet, requested amount (minimum Rp50.000), provider, provider order/reference, expiry, idempotency key, verified payment time and state: `created`, `pending`, `paid`, `credited`, `failed`, `canceled`, `expired`, `reconciliation_required`, optionally `refunded`. A provider-verified payment that arrives after local expiry enters `reconciliation_required` until exactly-once credit or explicit refund/reversal is recorded.
 
 `paid` means the verified external event is recorded. `credited` means the associated wallet ledger credit has committed exactly once. Only `credited` unlocks funds. PaymentEvent stores provider event ID, order ID, verification and processing state, amount/currency, redacted metadata and idempotency key; enforce provider event uniqueness. Duplicate/out-of-order events cannot double-credit or regress the order.
 
