@@ -15,7 +15,7 @@ A status label or architecture diagram is not evidence a component exists.
 ## Components and ownership
 
 - **Frontend:** one main upload action; inline estimate, progress, exception and result states. No prerequisite dashboard.
-- **Cloudflare Pages/Workers:** intended web/API runtime. If PDF/provider duration exceeds request limits, use one durable queue/consumer pattern. Queue delivery is at least once; consumers must be idempotent. Add a DLQ only if needed for actionable recovery, not as a second workflow system.
+- **Cloudflare Pages/Workers:** intended web/API runtime. Do not add a queue unless tested runtime/reliability limits require it. If needed, commit job + reservation in Supabase first, then dispatch to one durable queue/consumer; recover committed jobs that were not dispatched. Queue delivery is at least once, so consumers must be idempotent. Add a DLQ only if it materially helps recovery, not as a second workflow system.
 - **GitHub/GitHub Actions:** source of truth, deterministic CI, preview/release workflow. Current repository has no verified application/CI.
 - **Supabase Auth:** required before durable owner-scoped jobs/source storage and before any paid provider call or wallet operation. Basic preflight can precede login; the MVP does not offer guest wallet/guest paid jobs.
 - **Supabase Postgres:** conceptual jobs/pages/rows/issues/artifact metadata, wallet/immutable ledger, top-up orders/payment events and page assessments. No tables exist in the inspected public schema snapshot.
@@ -23,7 +23,7 @@ A status label or architecture diagram is not evidence a component exists.
 - **Reducto Deep Extract:** only extraction provider for initial runtime, through a server-only adapter. LlamaExtract/Pulse Ultra 2 excluded.
 - **Payment gateway:** unselected. Evaluate QRIS support, fees, verified callbacks, duplicate/event handling, settlement reports and refund mechanics before choosing.
 - **XLSX generation/verification:** generate formula-bearing editable XLSX; validate structure, recalculate eligible formulas in the selected supported engine, scan formula errors and verify row/page provenance.
-- **Billing transaction:** application-owned, database transaction/functions for reservation/settlement/release and unique idempotency keys; customer billing is separate from provider usage COGS.
+- **Billing transaction:** application-owned database transaction/functions for reservation/settlement/release and unique idempotency keys; customer billing is separate from provider usage COGS. Every provider attempt is logged internally, while provider usage exports/invoices are used for aggregate reconciliation.
 
 ## State and financial invariants
 
@@ -42,7 +42,7 @@ A status label or architecture diagram is not evidence a component exists.
 
 Before implementing paid processing, decide and test:
 1. Maximum upload bytes/pages, total job runtime/worker lease, provider timeout and bounded retry limit.
-2. Exact Reducto endpoint/schema/options, account plan, page-versus-credit metering and account usage export.
+2. Exact Reducto endpoint/schema/options, account plan, page-versus-credit metering, provider job/request status semantics for timeouts, and aggregate usage export.
 3. Data retention/training/region/DPA/terms for the selected Reducto account.
 4. Workbook generation and formula recalculation/error-scanning approach.
 5. Payment vendor and exact QRIS/webhook/settlement/refund/reconciliation contract.
@@ -63,7 +63,7 @@ Do not leave unspecified values as silent product behavior. Use config values an
 7. Implement XLSX generation, recalculation and formula error verification.
 8. Implement atomic reservation/settlement/release, page assessments and payment event/credit idempotency.
 9. Select/integrate payment provider after provider evaluation.
-10. Test cancellation/timeout, late worker, duplicate callback, concurrent reservation, privacy and financial reconciliation.
+10. Test cancellation/timeout, provider status-check-before-retry, post-commit queue dispatch recovery (if queue is enabled), late/expired payment reconciliation, late worker, duplicate callback, concurrent reservation, privacy and financial reconciliation.
 11. Inspect a real desktop/mobile preview and deploy only through the reviewed release flow.
 
 ## Cloud-only workflow
