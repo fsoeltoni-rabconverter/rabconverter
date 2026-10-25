@@ -1,33 +1,34 @@
 # RabConverter Documentation Index
 
-These documents are the product and engineering source of truth. When documents disagree, use the precedence below and record the decision in the relevant decision log. Code must follow approved documentation, not define product behavior accidentally.
+These documents are the product and engineering source of truth. When documents disagree, use the precedence below and record the decision in the decision log. Code must follow approved documentation, not define product behavior accidentally.
 
 ## Normative order
 
-1. `product-definition.md` — product promise, target user, scope and non-goals.
-2. `contractor-workflow.md` — end-to-end job/bid workflow and manual re-entry inventory.
-3. `document-taxonomy.md` — tender file types, likely structures and extraction strategy.
-4. `canonical-data-model.md` — normalized data contract and provenance.
-5. `supported-formats.md` — format support and explicit limitations.
-6. `user-experience.md` — remove.bg-inspired upload/review/export interaction.
-7. `processing-pipeline.md` — classification, parsing, normalization, validation and failure handling.
-8. `export-specification.md` — XLSX/CSV export contracts and reconciliation.
-9. `acceptance-criteria.md` — testable definition of done.
-10. `architecture.md` — cloud-only delivery and service boundaries.
-11. `security-and-data-handling.md` — file privacy, retention, secrets and tenant boundaries.
-12. `research-and-sources.md` — evidence log and source limitations.
-13. `decisions/README.md` — architecture/product decision log.
+1. product-definition.md — product promise, scope and formula-reconstruction boundary.
+2. contractor-workflow.md — Indonesian contractor process, pain signals and manual re-entry inventory.
+3. document-taxonomy.md — PDF classes, RAB row types and extraction targets.
+4. canonical-data-model.md — normalized data, formula provenance and source traceability.
+5. supported-formats.md — initial PDF scope and golden test matrix.
+6. user-experience.md — remove.bg-inspired upload/review/download flow.
+7. processing-pipeline.md — extraction, formula reconstruction, validation and failure handling.
+8. export-specification.md — formula-bearing XLSX contract and reconciliation.
+9. acceptance-criteria.md — testable definition of done.
+10. architecture.md — cloud-only architecture and deployment.
+11. security-and-data-handling.md — private files, retention and secrets.
+12. research-and-sources.md — evidence log, source quality and research limits.
+13. decisions/README.md — product/architecture decision log.
 
 ## Required gates before feature implementation
 
-- [ ] Product scope and the meaning of “no retyping” approved.
-- [ ] Target user and first supported tender template family agreed.
-- [ ] Representative examples for machine-readable spreadsheet and PDF inputs identified.
-- [ ] Canonical item schema and source provenance approved.
-- [ ] Import/export behavior documented, including unsupported/ambiguous cases.
-- [ ] Cloud-only build, test, preview and deployment workflow agreed.
-- [ ] Processing-provider decision documented only after a comparative test.
+- [ ] PDF RAB/BOQ is the explicit first input path.
+- [ ] Formula reconstruction is clearly distinguished from original formula recovery.
+- [ ] Supported layouts/formats and ambiguous cases are agreed.
+- [ ] Golden PDFs with reuse permission are identified and expected outputs written down.
+- [ ] Canonical fields, row types, source locations and formula provenance are approved.
+- [ ] XLSX export contract and source-vs-calculated reconciliation are agreed.
+- [ ] Cloud-only CI, preview and deployment workflow is configured.
+- [ ] Processing provider is selected only after benchmark, privacy, cost and runtime review.
 
 ## Change process
 
-A behavior-changing proposal must update the relevant normative docs and acceptance criteria in the same pull request. Keep changes small and reviewable. Do not create database tables, add paid processing providers, configure billing, or deploy a production route as a side effect of a documentation change.
+Behavior-changing proposals must update relevant normative docs and acceptance tests in the same pull request. Keep changes small and reviewable. Do not add database schema, paid processors, billing, or production routes as a side effect of documentation changes.
