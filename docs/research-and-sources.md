@@ -57,7 +57,7 @@ Research reviewed Indonesian RAB/Excel workflows, public tutorials and vendors, 
     Verify the unit billed for the selected endpoint/account (pages vs credits and any endpoint-specific multiplier); do not infer units from the price-card label alone.
 
 16. **Reducto Usage Export API** — https://docs.reducto.ai/reference/usage-export-api  
-    Use account-specific usage records/invoices to measure actual usage and costs by job, endpoint and attempt. Exact API access/fields must be verified during implementation.
+    Use provider usage exports/invoices to reconcile aggregate usage and spend; do not assume the export provides per-job or per-attempt attribution. RabConverter's own redacted attempt records must provide job/page, endpoint/config, provider job/request ID, attempt, usage unit/quantity, status, retry cause and latency. Verify exact API fields and granularity during implementation.
 
 17. **Reducto Extract overview** — https://docs.reducto.ai/extract/overview  
     Schema-based extraction API overview. Pin and test the exact API/settings used by RabConverter at implementation time.
@@ -71,7 +71,7 @@ The Reducto public pricing page presents zero-data-retention agreement and EU/AU
 
 At an illustrative planning FX rate of Rp18.050/USD, US$0.04/page is approximately Rp722 per provider-processed page. A provisional 20% retry factor gives approximately Rp866/page; use Rp900–Rp1.000 as a planning reserve only until actual account usage/invoices validate the distribution.
 
-This does not account for any per-field surcharge, account-specific pricing, non-billable page spend, hosting/storage/compute, gateway fees, taxes, operations or refunds. Subtracting this reserve from Rp2.500 retail only produces a planning contribution estimate, not verified margin or net profit. Never use free credits as recurring COGS reduction.
+This does not account for any per-field surcharge, account-specific pricing, non-billable page spend, hosting/storage/compute, gateway fees, taxes, operations or refunds. Treat Rp900–Rp1.000 only as a provisional provider-cost reserve, not a measured cost, contribution, margin or profit. Do not publish a per-page contribution estimate from these assumptions. Never use free credits as recurring COGS reduction.
 
 Record for every provider attempt: job/page, endpoint/config, usage unit and quantity, request ID, status/retry cause, latency, reported cost/currency when available, customer billable outcome and artifact reference. Provider spend on non-billable pages remains company COGS.
 
