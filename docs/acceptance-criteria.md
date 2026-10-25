@@ -20,6 +20,7 @@ Status: draft v4. Release accuracy thresholds must be set from a representative 
 - Provider responses are schema-validated, source-page provenance is checked, payload size is bounded, and untrusted content is never rendered as executable markup.
 - Retries are limited to transient transport/server/timeout errors and share stable job/run idempotency keys. Permanent errors are not retried.
 - On timeout, the existing provider job/request ID and status are checked before a retry; no blind duplicate provider job is created while the original may be running.
+- On timeout, the existing provider job/request ID and status are checked before a retry; no blind duplicate provider job is created while the original may be running.
 - Every attempt records job/page scope, endpoint/config version, provider job ID/request ID, page/credit usage unit and quantity, status, latency, retry reason and reported cost/currency when available. Usage export/invoices are used for aggregate reconciliation; per-job attempt detail comes from RabConverter records.
 - Real customer documents are not sent until the account-specific Reducto privacy/retention/region/DPA/plan gate is approved.
 - Start without a queue unless measured runtime limits require one. If Cloudflare Queues is used, commit the database job and reservation first, dispatch after commit, and recover committed-but-undispatched jobs. Assume at-least-once delivery and idempotent worker actions; no second job-orchestration system is introduced.
