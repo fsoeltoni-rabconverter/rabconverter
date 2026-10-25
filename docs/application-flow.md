@@ -8,7 +8,7 @@ Pricing/billability rules are owned exclusively by [pricing-and-billing.md](pric
 
 **Unggah PDF RAB/BOQ → sistem mengerjakan konversi → unduh XLSX.**
 
-The user should not need to understand extraction, row mapping, formula reconstruction, queue, wallet ledger or settlement. Those are system responsibilities. The interface displays the cost ceiling, actual state, result and any decision genuinely needed to make the result safe. Do not add a queue pre-emptively. If runtime limits later require one, create the job/reservation in the database first, commit, dispatch separately, and recover any committed job whose dispatch failed. Do not add a queue pre-emptively. If runtime limits later require one, create the job/reservation in the database first, commit, dispatch separately, and recover any committed job whose dispatch failed.
+The user should not need to understand extraction, row mapping, formula reconstruction, queue, wallet ledger or settlement. Those are system responsibilities. The interface displays the cost ceiling, actual state, result and any decision genuinely needed to make the result safe. Do not add a queue pre-emptively. If runtime limits later require one, create the job/reservation in the database first, commit, dispatch separately, and recover any committed job whose dispatch failed.
 
 ## 2. Non-negotiable UX contract
 
@@ -87,7 +87,6 @@ flowchart TD
 - Webhook may be repeated or arrive before/after a browser redirect. Verify signature/authenticity and amount/currency/order reference; persist provider event ID uniquely; apply state and credit transactionally/idempotently. A redirect is UI navigation only.
 - For pending or ambiguous provider state, retain the order, show current status and wait/check status without creating duplicate orders automatically.
 - If provider verification confirms payment only after the local expiry time, move to `reconciliation_required`; verify the provider's final order/payment state and then either post exactly one wallet credit or follow a refund/reversal path. Do not credit from the browser redirect/callback alone and do not auto-start conversion.
-- If provider verification confirms payment only after the local expiry time, move to `reconciliation_required`; verify the provider's final order/payment state and then either post exactly one wallet credit or follow a refund/reversal path. Do not credit from the browser redirect/callback alone and do not auto-start conversion.
 - On success, restore the existing conversion context, refresh the wallet, and require an explicit **Konversi PDF** click. Never auto-start paid processing from payment callback.
 - QRIS remains an option to evaluate, not an active integration until tested.
 
@@ -140,7 +139,6 @@ History, detailed transaction ledger and account settings remain secondary desti
 15. Provider timeout: the existing provider job/request is checked before any safe retry; provider-attempt cost/usage is recorded.
 16. Corrected export: same job, new immutable artifact version, no second customer charge; post-settlement amount correction uses a compensating ledger entry.
 17. Provider verifies a payment after local order expiry: reconciliation required until exactly-once credit or explicit refund/reversal is resolved.
-14. Database job/reservation commits but optional queue dispatch fails: the committed job is recoverable and eventually dispatched without creating a duplicate job/reservation.
 15. Provider timeout: the existing provider job/request is checked before any safe retry; provider-attempt cost/usage is recorded.
 16. Corrected export: same job, new immutable artifact version, no second customer charge; post-settlement amount correction uses a compensating ledger entry.
 17. Provider verifies a payment after local order expiry: reconciliation required until exactly-once credit or explicit refund/reversal is resolved.
