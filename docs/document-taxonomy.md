@@ -1,68 +1,69 @@
-# RAB Document Taxonomy and Extraction Targets
+# RAB Document and Page Taxonomy
 
-Status: Draft v2 — PDF RAB-first
+Status: specification v1.0 — 2026-10-25. Document classification and billing share stable source-page identities.
 
-## Product-specific document classes
+## Document classes
 
-| Class | Examples | Main extraction targets | Caution |
+| Class | Examples | Extraction targets | Caution |
 |---|---|---|---|
-| PDF RAB | Contractor estimate, residential/commercial work breakdown | Code, description, unit, quantity, rate, amount, section and recap | Formula graph usually absent from PDF |
-| PDF BOQ / Daftar Kuantitas dan Harga | Unpriced or priced tender schedule | Item code, description, unit, quantity, rate/amount when present | Blank rates must remain blank; client templates vary |
-| PDF rekapitulasi RAB | Work-group summary and final total | Section subtotals, total, tax/overhead fields and printed labels | Row inclusion and tax order vary |
-| PDF AHSP/AHS | Unit-price analysis | Work item, resource, unit, coefficient, base resource price and calculated unit price | Version, sector, region and standard matter |
-| Supporting tender documents | Invitation, specifications, addenda, drawings | Project metadata, dates, reference and context | Full semantic interpretation not MVP |
-| Spreadsheet source (XLS/XLSX) | Original workbook if also supplied | Native formulas, sheets, cell formats, hidden rows/sheets and formula caches | Treat native workbook as more authoritative for formula structure than a PDF printout |
-| Scanned/image PDF | Photocopy, scan, phone scan | OCR text plus cell layout candidates | Higher numeric uncertainty; require review |
-| PDF with drawn table lines/flattened spreadsheet | A spreadsheet printed to PDF | Cell/column geometry and row types | Visual grid is not a recovered workbook model |
+| PDF RAB | Contractor estimate, residential/commercial work breakdown | Code, description, unit, quantity, unit price, amount, section/recap | Formula graph normally absent |
+| PDF BOQ / Daftar Kuantitas dan Harga | Priced or unpriced tender schedule | Item code, description, unit, quantity and rates/amounts when present | Blank rates remain blank |
+| PDF RAB recap | Work-group recap and final total | Section totals, grand total and printed adjustments | Inclusion/order varies |
+| PDF AHSP/AHS | Unit price analysis | Work item, resource, unit, coefficient and source prices | Version, region and sector matter |
+| Supporting tender document | Invitation, specification, addendum, drawings | Project metadata/context only | Full semantic interpretation out of MVP |
+| Scanned/image PDF | Scan, photocopy, phone capture | OCR text, layout candidates, confidence | Higher numeric uncertainty |
+| Mixed PDF | Born-digital and scanned pages combined | Page-level extraction method | Method and warnings must be page-scoped |
+| Flattened spreadsheet printout | PDF that resembles Excel | Visible grid, row/column structure | Not a native workbook or formula graph |
 
-## Native PDF vs scan
+## Page classes for processing
 
-- Born-digital PDF: try text extraction and word/table geometry first.
-- Scanned PDF: OCR is required and numeric values must carry OCR confidence.
-- Mixed PDF: process page by page and preserve page-level method/warnings.
-- Vector lines/no text order: infer layout from coordinates, not merely reading-order text.
-- Rotated/low-resolution pages: warn or request a better source when safe row extraction is impossible.
+Each source page has one primary page classification:
+- **rab_boq_rows:** one or more work-item/line/recap records are visible.
+- **recap_or_total:** identifiable subtotal/grand-total/adjustment record.
+- **header_or_cover_only:** cover/title/header without usable RAB/BOQ content.
+- **blank_or_decoration:** blank, page number, margin, decorative line or footer only.
+- **unrelated_appendix:** content unrelated to RAB/BOQ extraction promise.
+- **drawing_only:** drawing with no usable RAB/BOQ table/recap data.
+- **unreadable_or_failed:** corrupt or unreadable page, or extraction produced no meaningful record.
+- **unknown_needs_review:** insufficient evidence to classify.
 
-## Common Indonesian RAB columns
+Row classes include project/document header, column header, section/group heading, work item, continuation, note/assumption, subtotal, carried-forward subtotal, grand total, tax/overhead/profit/contingency adjustment, blank/footer and unknown.
 
-Examples include No/Kode, Uraian Pekerjaan, Volume, Satuan, Harga Satuan, Jumlah/Total. These labels vary and may be ordered differently. The parser should map semantic aliases to canonical fields while retaining source header text.
+## Common Indonesian column labels
 
-## Row classes
+Common aliases include No/Kode, Uraian Pekerjaan, Volume, Satuan, Harga Satuan and Jumlah/Total. Preserve original header labels while mapping to canonical fields. Column order is not fixed.
 
-Every parsed row should be classified as one of:
-- document/project header;
-- column header;
-- section/group header;
-- work item;
-- continuation of a work-item description;
-- note/assumption;
-- subtotal;
-- carried-forward subtotal;
-- grand total;
-- tax/overhead/profit/contingency adjustment;
-- blank/decoration/page footer;
-- unknown.
+## Formula reconstruction
 
-Do not emit every printed line as a regular BOQ item.
+- Amount = quantity × unit price only when source columns and semantics are clear.
+- Subtotal only when section boundaries and included amount rows are clear.
+- Grand total only when recap inclusion/order is clear.
+- Tax/overhead/profit/contingency formula only when base, rate, order and inclusion/exclusion rules are explicit or confirmed.
+- Preserve printed source amount separately and compare with calculated result.
+- Ambiguous cases stay unresolved and generate warnings; never silently substitute a calculated value.
 
-## Formula reconstruction rules
+## Billable-page classification
 
-PDF values are source evidence; formulas are newly generated logic.
-- Generate amount = quantity × unit price only when both fields and their semantics are confidently mapped.
-- Generate subtotals only when the section boundary and included amount rows are clear.
-- Generate a grand total only when the recap logic is clear.
-- Tax/overhead/profit/contingency formula generation requires explicit recognition of calculation base, rates, order and inclusion/exclusion rules.
-- Reconstructed formulas must be labelled; never claim they are the exact original workbook formulas.
-- Compare calculated values with the printed amount. Record rounding tolerance and mismatches.
-- If ambiguous, preserve the source display value, flag it and leave that formula unresolved until user review.
+Billable assessment is deterministic product logic after extraction, not a provider-returned billing field and not an LLM decision.
 
-## Extraction order
+A source page is billable only if it contributes at least one meaningful, identifiable RAB/BOQ record to an XLSX artifact successfully generated and made available to the user. The record must have source-page provenance and include substantive data such as code, description, unit, quantity, price, printed amount, section, subtotal or recap data.
 
-1. Validate file and classify born-digital vs scan/mixed.
-2. Extract words, coordinates, pages and table regions.
-3. Detect rows, columns, headers, repeated headers and page continuations.
-4. Normalize local numeric formats with a recorded locale decision.
-5. Classify row type and map semantic columns.
-6. Reconstruct only safe formulas.
-7. Reconcile line amounts, subtotals and totals.
-8. Surface warnings and generate XLSX.
+Not billable: blank/decoration pages; cover/title page without RAB data; unrelated appendix; drawing-only page; failed/unreadable page with no usable record; duplicate page contributing no new retained record; provider output discarded before export.
+
+A repeated header does not make a page non-billable if actual RAB rows are retained. A recap page can be billable when its subtotal/total record is represented in the XLSX. Warnings do not themselves make a page non-billable if meaningful row data was recovered. Billability is not an accuracy guarantee.
+
+Each assessment records billable flag, reason code, usable-record count, source-page number, export-artifact ID and classifier version. Deduplicate by job/source-document/page. User charge is final billable-page count × the job's price snapshot; provider attempt count is never the billing unit.
+
+## Processing sequence
+
+1. Validate file and page count.
+2. Identify page classes and unsupported content.
+3. Extract page layout, words, coordinates and table candidates.
+4. Segment rows, headers and page continuations.
+5. Map semantic columns and preserve raw values.
+6. Normalize numeric values with locale provenance.
+7. Classify rows and source pages.
+8. Reconstruct supported formula candidates.
+9. Reconcile and create review warnings.
+10. Create and verify XLSX.
+11. Finalize page-level billability and one idempotent job charge only after a usable artifact exists.

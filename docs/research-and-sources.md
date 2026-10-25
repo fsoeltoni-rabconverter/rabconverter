@@ -1,123 +1,92 @@
-# Research and Sources — Indonesia PDF RAB to Formula-bearing Excel
+# Research and Sources — PDF RAB to Formula-bearing Excel
 
-Research updated: 2026-10-25  
-Goal: find the contractor workflow, sources of manual re-entry, pain/expectations expressed publicly, and the technical boundary between PDF table conversion and formula reconstruction.
+Research snapshot: 2026-10-25  
+Purpose: document market/workflow evidence, technical constraints, provider price assumptions and research gaps. This is qualitative synthesis, not a statistically representative survey.
 
-## Research approach
+## Research scope
 
-Search paths included:
-1. Indonesian contractor/RAB Excel workflows and formulas.
-2. Public Facebook-group snippets and YouTube/tutorial pages.
-3. Generic PDF-to-Excel competitors and their stated limits.
-4. Indonesian RAB software/services and the way they position editability/formulas.
-5. Indonesian government/open data for BOQ/AHSP examples and regional guidance.
-6. International construction estimating workflow sources used only as corroboration, not as Indonesian regulations.
+Research reviewed Indonesian RAB/Excel workflows, public tutorials and vendor pages, PDF-to-Excel converters, public BOQ/AHSP examples, wider estimating workflows and the public Reducto pricing material. Product claims are not relabelled as independent customer testimony. Search snippets are noted as weak when the full page could not be independently retrieved.
 
-This is a source-grounded qualitative synthesis. Search-index snippets are not treated as full posts when the linked page could not be read. Product marketing is not relabelled as user testimony.
+## Public workflow and market sources
 
-## High-signal sources
+1. **RunConvert — PDF to Excel FAQ** — https://www.runconvert.com/id/pdf-to-excel  
+   States that PDF does not preserve active formulas in the same manner as an Excel workbook and conversion yields displayed values. Supports the formula-reconstruction boundary.
 
-### 1. RunConvert — PDF to Excel FAQ
-https://www.runconvert.com/id/pdf-to-excel
+2. **Adobe Acrobat Indonesia — PDF to Excel** — https://www.adobe.com/id_id/acrobat/how-to/pdf-to-excel-xlsx-converter.html  
+   Describes editable spreadsheet export/layout preservation and OCR for scans. Generic converter baseline, not specifically RAB-aware formula reconstruction.
 
-Important technical statement: the FAQ says PDF files do not contain active formulas; conversion yields displayed values rather than the original formulas. This is the core technical constraint. RabConverter cannot recover exact formula cells/references from a PDF alone. It must build new formulas from the recognized RAB structure and explicitly label those formulas as reconstructed.
+3. **PDF4me Indonesia — PDF to Excel** — https://pdf4me.com/id/pdf-ke-excel/  
+   Markets extraction of PDF tables into editable rows/columns and OCR. Generic conversion is not sufficient differentiation by itself.
 
-### 2. Adobe Acrobat Indonesia — PDF to Excel
-https://www.adobe.com/id_id/acrobat/how-to/pdf-to-excel-xlsx-converter.html
+4. **HiTekno — Cara Mudah Membuat RAB di Excel** — https://www.hitekno.com/internet/2025/11/02/122303/cara-mudah-membuat-rab-di-excel-cocok-untuk-proyek-bangunan-hingga-acara  
+   Published 2025-11-02; describes common columns and formulas such as line amount and totals. Tutorial evidence, not a complaint survey.
 
-Describes editable XLS/XLSX export, layout/column preservation and OCR for scanned PDFs. This establishes a baseline set of expectations for generic conversion. It does not specifically promise construction/RAB-aware formula reconstruction.
+5. **Public Facebook group result — easy/free RAB app request** — https://www.facebook.com/groups/SKETCHUPNUSANTARA/posts/1886173278717196/  
+   Indexed snippet asks for a free, easy-to-learn RAB app; full post could not be independently retrieved. Treat as a weak directional signal, not a market-wide preference.
 
-### 3. PDF4me Indonesia — PDF to Excel
-https://pdf4me.com/id/pdf-ke-excel/
+6. **Denahku for contractors** — https://denahku.com/untuk-kontraktor  
+   Provider-stated positioning includes editable line items, company price book, Excel export and audit/version features.
 
-Positions its converter around extracting PDF tables into editable rows and columns, reducing manual re-entry and using OCR when the source is a scan. This demonstrates generic converters already cover the simple “make a spreadsheet” claim. RabConverter must differentiate on RAB row classification, generated formulas, subtotal reconciliation, source traceability and warnings.
+7. **Bangun.com** — https://bangun.com/  
+   Provider-stated service positions editable Excel and RAB review as part of its value proposition.
 
-### 4. Indonesian tutorial — HiTekno, “Cara Mudah Membuat RAB di Excel”
-https://www.hitekno.com/internet/2025/11/02/122303/cara-mudah-membuat-rab-di-excel-cocok-untuk-proyek-bangunan-hingga-acara
+8. **Satu Data Sumbar — BOQ Bina Marga/AHSP workbook metadata** — https://data.sumbarprov.go.id/mn_MN/dataset/data-bill-of-quantity-bid-bina-marga-dinas-pupr-kota-sawahlunto/resource/2bc73802-bfd8-4c67-a332-213bfc2299e2  
+   Example of distinct recap, BOQ and AHSP layers. Check license and reuse rights before using its data or file as a fixture.
 
-Published 2025-11-02. Describes common columns: description, quantity, unit, unit price and total. Gives formula examples for row amounts (quantity × unit price), grand total (SUM), category subtotal (SUMIF) and dynamic lookup/validation functions. This is a how-to article, not an estimator complaint survey.
+9. **Jateng regional government — AHSP BMCK 2024 guidance** — https://data.jatengprov.go.id/dataset/cc7de1cd-d469-4cd8-b890-b76c015a60da/resource/da42b1d8-5f38-4d92-9c01-ad8ff6803f4c/download/pedoman-ahsp-bmck-2024-sign.pdf  
+   Guidance cautions that applicability and cost should be adjusted to technical/local context. Do not assume a universal AHSP rate/logic.
 
-### 5. Public Facebook group result — request for free/easy RAB software
-https://www.facebook.com/groups/SKETCHUPNUSANTARA/posts/1886173278717196/
+10. **S-RAB** — https://www.sekowahyu.id/s-rab/  
+    Provider/author describes spreadsheet-based data derived from official construction PDFs. Adjacent evidence of converting technical PDF data to editable sheets.
 
-Search indexing surfaced the title/snippet: “Saran dong, aplikasi RAB yg free dan mudah di pelajari/ di gunakan..” (“Any suggestions for a free RAB app that is easy to learn/use?”). The page could not be fully independently retrieved through the current web reader, so this is a weak qualitative signal only. It suggests low setup friction and price sensitivity matter to at least one public poster; it does not prove market-wide preference.
+11. **Bluebeam — Takeoffs and Estimation** — https://www.bluebeam.com/workflows/takeoffs-and-estimation/  
+    International vendor context on transfer errors/manual takeoff. Useful background only; drawing takeoff remains out of the MVP.
 
-### 6. Public Indonesian RAB product reference — Denahku
-https://denahku.com/untuk-kontraktor
+12. **US-Estimation — From Bid Package to Submitted Bid** — https://usestimation.com/process  
+    General tender workflow context, not Indonesian legal guidance.
 
-The product page emphasizes editing line items, using the contractor's own price book, formula-bearing Excel exports, auditing changes, and draft/final version comparison. Treat this as provider-stated value positioning, not independent customer testimony. It is useful for identifying the category's feature language and likely expectations.
+13. **Estimation QS — Tender Preparation and Documentation** — https://estimationqs.com/tender-preparation-and-documentation-3/  
+    Describes editable Excel BOQ and tender prep practices in another context; do not apply jurisdiction-specific process as Indonesian regulation.
 
-### 7. Public Indonesian RAB service reference — Bangun.com
-https://bangun.com/
+## Reducto cost source and selection
 
-The provider states that its service returns professional PDF RAB with editable Excel, detailed quantities and prices, and a professional review step. This is not a direct conversion competitor in every workflow; it is evidence that editable Excel and reviewability are used as part of the value promise in the Indonesian market. Claims about turnaround, totals served or standards are provider claims, not independently audited here.
+14. **Reducto official pricing** — https://reducto.ai/pricing  
+    Public price card lists Deep Extract at **US$40 per 1,000 pages** for Standard list pricing, equivalent to US$0.04/page before retries, extra services or account-specific changes. Introductory/free usage is temporary and is not recurring unit economics. Do not assume a parsing batch discount applies to Deep Extract without confirmation for the exact endpoint and plan.
 
-### 8. Satu Data Sumbar — BOQ Bina Marga / AHSP workbook metadata
-https://data.sumbarprov.go.id/mn_MN/dataset/data-bill-of-quantity-bid-bina-marga-dinas-pupr-kota-sawahlunto/resource/2bc73802-bfd8-4c67-a332-213bfc2299e2
+15. **Reducto Extract overview** — https://docs.reducto.ai/extract/overview  
+    Official API overview for schema-based document extraction. The exact API and settings used by RabConverter must be verified at implementation time and pinned/tested.
 
-Public dataset metadata describes a construction BOQ workbook containing price recapitulation, Daftar Kuantitas dan Harga, and Analisa Harga Satuan Pekerjaan (AHSP) for Bina Marga. This is a strong example of related but distinct workbook layers (recap, BOQ and unit-price analysis). Metadata indicates the resource is labelled XLS and the dataset has not supplied a license; do not assume reuse rights for a copied dataset or fixture without checking applicable terms.
+16. **Reducto best practices** — https://docs.reducto.ai/extraction/best-practices-extract  
+    Official extraction guidance to consult while defining schema and evaluation fixtures. Guidance is not a substitute for testing actual Indonesian PDFs.
 
-Dataset landing page:
-https://data.sumbarprov.go.id/mn_MN/dataset/data-bill-of-quantity-bid-bina-marga-dinas-pupr-kota-sawahlunto
+### COGS planning calculation
 
-### 9. Jateng regional government — AHSP BMCK 2024 guidance PDF
-https://data.jatengprov.go.id/dataset/cc7de1cd-d469-4cd8-b890-b76c015a60da/resource/da42b1d8-5f38-4d92-9c01-ad8ff6803f4c/download/pedoman-ahsp-bmck-2024-sign.pdf
+At an illustrative planning FX rate of Rp18.050/USD, US$0.04/page is approximately Rp722/page. A provisional 20% retry cost factor gives approximately Rp866 per provider-submitted page; planning reserve is rounded to Rp900–Rp1.000 until actual logs are available. This FX rate and retry factor are assumptions, not live rates or measured performance. Free provider credits are excluded from recurring COGS. Non-billable pages, hosting, storage, gateway fees, taxes, operations and refunds are not included in this basic provider-cost estimate.
 
-The document's disclaimer says the guide is not universally representative of field requirements across Indonesia and costs should be adjusted to technical specifications, applicable provisions, engineering judgment and local market prices. This is important for product scope: formula reconstruction should not silently insert a generic AHSP price or assume one standard applies everywhere.
+## Provider alternatives evaluated but not selected
 
-### 10. S-RAB — source-document conversion into a spreadsheet library
-https://www.sekowahyu.id/s-rab/
-
-The site states that a reference database is provided as editable Google Sheets and was converted from official Bina Konstruksi PDF documents. This is adjacent evidence that users/practitioners transform PDF technical data into editable sheet-based databases. The page is provider/author content, not a user complaint.
-
-### 11. Bluebeam — Takeoffs and Estimation
-https://www.bluebeam.com/workflows/takeoffs-and-estimation/
-
-International vendor source says manual transfer between digital takeoff and estimate spreadsheets creates duplicated data entry and can lead to stale quantities. It is useful background but relates more to drawing takeoff than PDF RAB table conversion; do not let it broaden the MVP.
-
-### 12. US-Estimation — From Bid Package to Submitted Bid
-https://usestimation.com/process
-
-Workflow source describes receiving drawings, specs, addenda, forms and scope; quantities/takeoff; pricing; quotes; clarifications; addendum checks; quality review and submission. It corroborates general workflow order but is not Indonesian procurement authority.
-
-### 13. Estimation QS — Tender Preparation and Documentation
-https://estimationqs.com/tender-preparation-and-documentation-3/
-
-Describes tender forms, unpriced BOQ, drawings, specifications, editable Excel pricing, proofreading and transferring final amounts into official forms. This illustrates format-transfer work but uses jurisdiction-specific procedures; do not apply its rules as Indonesian legal requirements.
+LlamaExtract Agentic Plus and Pulse Ultra 2 were reviewed as higher-cost alternatives and are explicitly excluded from the initial runtime. They must not be added as automatic fallback providers. Keeping their evaluation here is research history only, not an implementation dependency. Any future provider change requires measured accuracy/cost/privacy comparison, a decision-log entry and updated acceptance tests.
 
 ## What the evidence supports
 
-1. Generic PDF-to-Excel products already support table extraction and editable XLSX; “we convert PDF” alone is not enough differentiation.
-2. A PDF does not ordinarily retain the active Excel formula graph. Formula-bearing output is a reconstruction, not faithful formula recovery.
-3. Common RAB structure includes description, quantity/volume, unit, unit rate and amount/total, with section and project-level totals. Actual templates vary.
-4. Formula output has meaningful value only when the workbook recalculates correctly after edits and the generated formula can be inspected.
-5. User trust depends on comparing formula results with printed source amounts and visibly flagging mismatches instead of silently “fixing” the RAB.
-6. Evidence of an explicit free/easy software request exists in public social search results, but the accessible social-media evidence is too sparse to quantify how widespread the pain is.
-7. Prices and AHSP/AHS depend on context/source; the conversion product should not silently provide official/market rates.
+- Generic PDF-to-Excel providers already offer editable table conversion; conversion alone is not enough to differentiate.
+- A PDF generally does not retain the active Excel formula graph.
+- Common RABs use fields such as description, quantity, unit, unit price and amount; actual layouts vary.
+- Formula value depends on correct recalculation and traceable source-vs-calculated comparison.
+- RAB/AHSP prices, taxes and calculation logic vary by source and context.
+- Available social evidence is too sparse to quantify prevalence, willingness-to-pay or time saved.
+- Reducto list pricing provides a starting estimate, not RabConverter's measured COGS.
 
-## Public social evidence and its limits
+## Commercial implication
 
-- Facebook group snippet: one request for a free, easy-to-learn RAB app (source 5); full page not retrievable in this run.
-- Facebook posts surfaced for RAB calculators and Excel RAB template promotion, but those were primarily promotional and therefore excluded as proof of user complaints.
-- YouTube search surfaced multiple RAB/Excel tutorials and a tutorial about AHSP formulas. These establish that formula-driven RAB is a known workflow topic, but view count or marketing copy would not establish user dissatisfaction.
-- Reddit/Kaskus queries did not return robust, clearly attributable Indonesian contractor discussions in the current indexed results.
-- No representative sample size, sentiment prevalence, willingness-to-pay estimate or time-saved metric is asserted.
+Initial planned customer price is Rp2.500 per billable page, with minimum top-up Rp50.000. A billable page is a distinct source page contributing usable RAB/BOQ content to a successfully generated XLSX, not every provider-submitted page. Full rules and limitations are in [pricing-and-billing.md](pricing-and-billing.md).
 
-## Product implication
+## Remaining gaps
 
-Own a sharply defined category: PDF RAB → formula-bearing Excel.
-1. Recover table cells and row types.
-2. Preserve PDF values as source evidence.
-3. Generate standard formulas only for confidently mapped columns.
-4. Compare generated outputs to printed amounts/subtotals/grand total.
-5. Mark reconstructed formulas explicitly.
-6. Keep unresolved rows and ambiguous tax/recap logic in a warning sheet.
-7. Offer a fast and simple upload/download flow, with review needed only when confidence is low.
-
-## Remaining research gaps
-
-- Obtain legal-to-use sample PDFs from multiple Indonesian contexts (private residential, private commercial, public works, renovation).
-- Inspect at least 10–20 golden PDFs with different layouts and scan quality before setting accuracy targets.
-- Add deeper social research only when source pages, comments or transcripts can be accessed and attributed reliably.
-- Validate whether customers prefer a normalized workbook or a visual approximation of the original PDF layout.
-- Determine the target free-tier/page limit after measuring real processing cost.
+- Collect 10–20 or more legally usable golden PDFs across contractor RAB, public BOQ, renovation and private project formats.
+- Measure born-digital versus scanned distributions and field-level accuracy.
+- Benchmark Reducto Deep Extract with representative layouts using permitted test data.
+- Verify account-specific plan, privacy, retention, regions, DPA, exact usage metering and rate card.
+- Select payment gateway after comparing QRIS support, fees, callbacks, reconciliation, refunds and operational reliability.
+- Measure full variable cost per provider page and billable page before claiming margin or setting free limits.
+- Validate customer expectations around workbook layout and whether a normalized workbook is sufficient.

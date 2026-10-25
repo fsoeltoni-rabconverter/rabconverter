@@ -1,87 +1,95 @@
 # Product Definition
 
-Status: Draft v2 — grounded in public-market and workflow research  
+Status: baseline produk v1.0 — 2026-10-25  
 Product: RabConverter
 
 ## One-sentence promise
 
-Upload a PDF RAB and download an editable Excel workbook whose extracted values are traceable to the PDF and whose reconstructed calculations use working Excel formulas where the source structure supports them.
+Unggah PDF RAB/BOQ dan unduh workbook Excel editable yang mempertahankan nilai sumber serta menggunakan formula hasil rekonstruksi yang dapat diperiksa saat struktur sumber mendukungnya.
 
-## Target user
+## Target user and job to be done
 
-Indonesian small and mid-sized contractors, builders, specialist subcontractors, estimators and administrative staff who receive a PDF RAB/BOQ from a client, quantity surveyor, consultant or another contractor, then need to reuse the data in Excel for reviewing, modifying, repricing or preparing a tender/quotation.
+Target awal adalah kontraktor kecil/menengah, builder, subkontraktor, estimator, quantity surveyor dan staf administrasi proyek Indonesia yang menerima PDF RAB/BOQ, kemudian perlu menyalin atau menggunakan ulang datanya untuk meninjau, mengubah volume/harga, menyusun penawaran atau meneruskan data ke template lain.
 
-## Core job to be done
-
-“When I receive a RAB/BOQ as PDF, I do not want to manually type every row into Excel. I want an editable workbook with the line items, units, quantities, prices, subtotals and totals in the right columns, and I want the arithmetic to work when I change a quantity or rate.”
+Job to be done: ketika menerima RAB/BOQ dalam PDF, pengguna tidak ingin mengetik ulang baris satu per satu. Mereka ingin Excel yang dapat diedit, berisi item dan angka di kolom yang benar, dengan rumus yang bekerja ketika angka yang relevan diubah.
 
 ## Product outcome
 
-The user uploads a PDF, gets a preview and extraction status, reviews fields that are uncertain, and downloads an XLSX with:
-- editable cells (not images embedded in a sheet);
-- working, inspectable formulas for reconstructed calculations;
-- section/subtotal structure preserved when detected;
-- original extracted values distinguished from formula-derived values;
-- source page/row provenance and a clear warning sheet when issues remain.
+Pengguna mengunggah PDF, mendapat status pemrosesan dan preview, meninjau bagian yang tidak pasti, lalu memperoleh XLSX dengan:
+- sel yang benar-benar dapat diedit, bukan screenshot yang ditempel di workbook;
+- formula Excel aktif untuk perhitungan yang aman direkonstruksi;
+- urutan dan hierarki section sejauh terdeteksi;
+- nilai tercetak dari PDF terpisah dari formula dan hasil perhitungan;
+- provenance halaman/region, status review dan warning yang bisa ditindaklanjuti;
+- ringkasan tagihan yang cocok dengan ledger pekerjaan, tanpa mengekspos COGS internal provider.
 
-## Important honesty boundary: formula reconstruction
+## Formula reconstruction boundary
 
-A PDF generally preserves the displayed output of a calculation, not the original Excel formula or references. Therefore, RabConverter cannot claim to recover the exact original formula from a PDF unless formula logic is separately present in the document.
+PDF biasanya menyimpan hasil yang tampil, bukan formula Excel dan graph referensi sel aslinya. Formula baru harus disebut reconstructed/generated, tidak pernah original recovered.
 
-The product will reconstruct common formulas, not falsely claim recovery:
-- line amount = quantity × unit price, where the columns and semantics are confidently identified;
-- subtotal = sum of the appropriate line amounts within a section, where section boundaries are clear;
-- grand total = sum of accepted section subtotals or included amounts;
-- optional tax/overhead/profit formulas only when the applicable base, rates and inclusion logic are identifiable and explicitly approved.
+Formula yang dapat diusulkan:
+- jumlah item = volume × harga satuan saat kolom dan makna angkanya teridentifikasi dengan yakin;
+- subtotal = jumlah item yang termasuk dalam section yang batasnya jelas;
+- grand total = agregasi subtotal/baris yang aturan masuknya jelas;
+- pajak, overhead, keuntungan atau contingency hanya jika basis, rate, urutan, dan aturan inklusi/eksklusi tercetak atau dikonfirmasi pengguna.
 
-Every generated formula must be labelled as reconstructed/generated. Printed PDF amounts remain source evidence; they are compared with calculated results. Where formula logic is ambiguous, output the extracted value, flag the issue, and leave the ambiguous formula blank or require user confirmation.
+Jika formula tidak jelas, pertahankan nilai PDF, tampilkan warning dan jangan membuat formula spekulatif.
 
 ## Product principles
 
-- **PDF-first wedge:** first optimize conversion of a supplied PDF RAB/BOQ to a formula-bearing XLSX.
-- **No silent invention:** unknown quantities, units, prices, formulas or rules remain unresolved rather than guessed.
-- **Editable, not just pretty:** a valid export has real cell values and formulas, not an image or values-only dump.
-- **Review before trust:** highlight uncertain OCR, column mapping, number formats and arithmetic mismatches.
-- **Traceable numbers:** every extracted row and important field refers back to source page/region when available.
-- **Preserve order and hierarchy:** do not flatten sections, notes, subtotals or totals into indistinguishable work items.
-- **Fast, simple UX:** one primary upload action, clear progress, review only where needed, then download.
-- **Cloud-only:** GitHub source of truth, GitHub Actions for checks/deployment, Cloudflare for web/preview, Supabase for user/job metadata and private storage where appropriate.
-- **No overclaiming:** no promises of perfect OCR or authoritative RAB validation.
+1. **PDF-first:** optimalkan konversi PDF RAB/BOQ sebelum memperluas input.
+2. **No silent invention:** data kosong/ambigu tidak diisi dengan tebakan.
+3. **Editable result:** nilai dan formula ada pada sel Excel, bukan gambar atau dump nilai saja.
+4. **Review exceptions:** tampilkan keraguan OCR, mapping kolom, format angka dan mismatch.
+5. **Traceable numbers:** field dan row merujuk ke halaman/region sumber bila tersedia.
+6. **Preserve structure:** section, note, subtotal, total dan continuation tidak disamakan sebagai item biasa.
+7. **Fast workflow:** upload → proses → review seperlunya → download.
+8. **Cloud-only development:** GitHub, GitHub Actions, Cloudflare dan Supabase sesuai kebutuhan.
+9. **Commercial clarity:** biaya dijelaskan sebelum proses; pengguna melihat estimasi, saldo, halaman tertagih final dan histori transaksi.
+10. **Honest performance:** tidak menjanjikan OCR sempurna atau validasi RAB yang otoritatif.
 
 ## MVP scope
 
-1. Upload a PDF RAB/BOQ.
-2. Detect whether PDF is text-based, scanned, mixed or unsupported.
-3. Extract tables with rows/columns, page references, text confidence and likely row type (section, item, note, subtotal, total).
-4. Map common RAB columns such as item/code, description, unit, quantity/volume, unit price, amount.
-5. Reconstruct and label safe, common formulas.
-6. Compare formula results with printed amounts and section/grand totals.
-7. Provide inline review/edit for uncertain fields and formula mapping.
-8. Export XLSX with formula-bearing item rows, sections, recap and exceptions/warning sheet.
-9. Offer a values-only or CSV export only as a secondary option, clearly distinguished from formula-bearing XLSX.
-10. Explain failure and allow safe retry without losing review edits.
+1. Upload dan validasi PDF RAB/BOQ.
+2. Deteksi apakah PDF berbasis teks, scan, campuran atau tidak didukung.
+3. Ekstrak tabel/row dengan provenance halaman.
+4. Mapping kolom umum: kode, uraian, satuan, volume, harga satuan dan jumlah.
+5. Rekonstruksi formula aman dan label provenance.
+6. Perbandingan line amount/subtotal/grand total dengan angka tercetak.
+7. Review/edit field yang belum yakin.
+8. Ekspor XLSX dengan formula-bearing item rows, section, recap dan exceptions/warning sheet.
+9. Penagihan halaman yang memenuhi definisi billable page di pricing-and-billing.md.
+10. Top-up saldo minimum Rp50.000; payment provider hanya setelah dipilih dan diverifikasi.
+11. Retry pemrosesan yang aman dan idempotent.
 
-## Non-goals for MVP
+## Commercial baseline
 
-- Exact recovery of original Excel formulas, hidden sheets, named ranges, macros or reference graph from a PDF alone.
-- Generating a technically correct quantity takeoff from architectural/structural drawings.
-- Authoritative AHSP/AHS matching or automatic market pricing.
-- Assuming a fixed tax rate, overhead, profit, contingency or rounding rule for every RAB.
-- Guaranteed acceptance by a procurement portal or exact reproduction of every agency template.
-- Tender submission, signing, full procurement, scheduling or project management.
+- Harga pelanggan: Rp2.500 per billable page.
+- Minimum top-up: Rp50.000.
+- Charge: final billable pages × Rp2.500, menggunakan snapshot harga yang berlaku ketika job dibooking.
+- Tidak ada charge untuk job tanpa hasil XLSX berhasil, maupun halaman yang tidak menghasilkan data RAB/BOQ berguna.
+- Retry, provider call dan biaya provider bukan unit tambahan tagihan pelanggan.
+- Detail wallet, payment states, idempotency, reconciliation, refunds dan COGS hanya ditetapkan di pricing-and-billing.md.
+
+## Extraction provider boundary
+
+Reducto Deep Extract dipilih sebagai satu-satunya provider ekstraksi awal. Pilihan ini adalah keputusan runtime untuk MVP, bukan klaim bahwa benchmark lokal telah lulus. LlamaExtract dan Pulse Ultra 2 tidak termasuk integrasi atau fallback. Performa, biaya aktual, retensi data, region, plan, API contract dan terms Reducto harus divalidasi sebelum memproses dokumen pelanggan nyata.
+
+## Non-goals
+
+- Memulihkan formula, hidden sheet, named range, macro atau graph workbook asli dari PDF.
+- Quantity takeoff dari drawing arsitektur/struktur.
+- Harga pasar atau AHSP/AHS otomatis yang dianggap otoritatif.
+- Pajak, overhead, profit, contingency atau metode pembulatan universal.
+- Jaminan acceptance procurement portal atau replika sempurna seluruh template.
+- Tender CRM, portal submission, tanda tangan, project management dan supplier quote workflow.
 
 ## Competitive positioning
 
-General PDF-to-Excel converters already offer editable spreadsheet conversion. RabConverter should differentiate around the RAB-specific layer: Indonesian construction column understanding, row hierarchy, formula reconstruction, comparison against printed totals, safe ambiguity handling and an export a contractor can continue editing.
+Generic PDF-to-Excel converters already offer editable spreadsheet conversion. RabConverter differentiates through RAB-specific row understanding, reconstructed formulas, reconciliation with printed totals, visible ambiguity and a workbook a contractor can keep editing.
 
-## Success measures
+## Success metrics
 
-- Field-level exactness of description, unit, quantity, rate and printed amount on golden PDFs.
-- Correct distinction between item rows, section headers, notes and subtotal/total rows.
-- Percentage of eligible line amounts with valid formulas and correct calculation results.
-- Count and magnitude of formula-vs-printed-total mismatches caught.
-- XLSX opens without corruption; formulas recalculate correctly in tested spreadsheet apps.
-- Time to reviewed download and percent of rows corrected by users.
-- Parser/OCR cost and processing time by pages/document class.
+Ukur pada golden PDFs: exactness field, klasifikasi row, formula correctness, valid recalculation, discrepancy detection, warning precision, waktu sampai file dapat diunduh, proporsi koreksi pengguna, processing time, provider usage per source page, retry rate, billable/non-billable page ratio, biaya aktual per billable page, payment failure dan refund rate.
 
-Do not claim productivity savings or accuracy percentages until measured on a representative sample.
+Jangan mengklaim akurasi, penghematan waktu, willingness-to-pay, atau margin nyata sampai metriknya diukur.

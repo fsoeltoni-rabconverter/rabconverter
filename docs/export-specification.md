@@ -1,70 +1,67 @@
 # Export Specification — PDF RAB to XLSX
 
-Status: Draft v2
+Status: specification v1.0 — 2026-10-25.
 
 ## Primary output promise
 
-The default output is an editable XLSX workbook with formulas reconstructed for eligible line totals and rollups. It is not described as an exact recovery of the original Excel workbook because a PDF normally does not contain its original formula graph.
+Default output is an editable XLSX workbook with formulas reconstructed for eligible line totals and rollups. It is not described as exact recovery of the original workbook because a PDF normally does not retain the original formula graph.
 
 ## Workbook tabs
 
-1. **RAB** — primary rows in source order. Columns should include item code/number, description, unit, quantity/volume, unit price, amount, formula status and source page.
-2. **Rekap** — section subtotals and grand total only where row membership and arithmetic structure are sufficiently clear.
-3. **Review_Warnings** — unresolved rows, field-level confidence, source page, mismatch values and suggested correction.
-4. **Source_Info** — original filename, source PDF page count, detected PDF class, processing version, number locale and generation time.
-5. **Original_Values** — optional audit view containing the values as extracted/printed separately from reconstructed formulas.
+1. **RAB** — primary rows in source order. Include item code/number, description, unit, quantity/volume, unit price, printed amount or source reference, formula amount/status, review state and source page.
+2. **Rekap** — section subtotals and grand total only where row membership and arithmetic structure are clear.
+3. **Review_Warnings** — unresolved rows/fields, confidence where available, source page, printed/calculated/difference values and suggested action.
+4. **Source_Info** — original filename, source page count, PDF class, pipeline/provider version, numeric locale decision, generation time, export version, source checksum or safe identifier, billable page count, page price snapshot and customer charge reference.
+5. **Original_Values** — optional audit view with extracted/printed values separate from reconstructed formula cells.
+
+Do not include internal provider API keys, raw payment callbacks, private storage URLs, provider credentials or internal COGS in the workbook. A customer-facing billing summary may include billable pages, customer price/page and final customer charge, not provider cost.
 
 ## Formula contract
 
-- If quantity and unit price are present and unambiguous, set amount to a formula equivalent to quantity_cell * unit_price_cell.
-- If quantity, unit price or column mapping is uncertain, do not create an amount formula automatically.
-- Generate section subtotal only if section start/end and included rows are clearly identified.
-- Generate grand total only when the source's rollup logic is sufficiently clear.
-- Apply tax, overhead, profit or contingency formulas only when their bases, rates, order and inclusion/exclusion rules are explicit or confirmed by the user.
-- Label formula provenance as reconstructed, never original_recovered.
-- Keep printed amount as a separate source value for comparison.
-- Record the amount formula and calculated result separately where the export model supports it.
-- Formula errors or mismatches must appear in Review_Warnings.
-- Do not replace a source number with a formula result without retaining the source value for comparison.
+- If quantity and unit price are present and unambiguous, the amount cell contains a formula equivalent to quantity_cell × unit_price_cell.
+- Uncertain quantity, rate or column mapping means no automatic amount formula.
+- Section subtotal is generated only with clear row membership.
+- Grand total is generated only with clear recap logic.
+- Tax, overhead, profit or contingency formula is applied only when base, rate, order and inclusion/exclusion rules are explicit or confirmed.
+- Formula provenance is reconstructed or user-confirmed; never label as original recovered.
+- Preserve the printed amount separately for reconciliation.
+- Formula string and cached/displayed result are separate concepts; test recalculation in supported spreadsheet apps.
+- Formula errors/mismatches appear in Review_Warnings; do not silently replace printed source amounts.
 
 ## Numeric behavior
 
-- Use decimal-safe parsing and documented rounding/precision behavior.
-- Preserve locale information; common Indonesian formatting may use dots for thousands and commas for decimals.
-- Do not turn a blank unit price into zero.
-- Do not remove leading zeros from item codes.
-- Do not convert or normalize units without explicit rules.
-- Avoid hardcoding a tax rate or applying universal overhead/profit assumptions.
-- Confirm ambiguous number formats before generating totals that depend on the interpretation.
+- Decimal-safe parsing and explicit precision/rounding rules.
+- Preserve locale context; common Indonesian number formats use dots for thousands and commas for decimals.
+- Blank rate stays blank; do not coerce it to zero.
+- Preserve leading zeros in item codes.
+- Do not normalize units without explicit approved rules.
+- Do not apply universal tax, overhead or profit values.
+- Require review when number format is ambiguous.
 
 ## Reconciliation checks
 
-- Extracted line item amount vs reconstructed quantity * unit price.
-- Sum of line amounts vs printed section subtotal.
-- Sum of accepted section totals vs printed grand total.
-- Whether subtotal rows were accidentally counted as items and double-counted.
-- Whether the same carried-forward subtotal is counted more than once.
-- Whether tax/overhead/profit lines are already included in the grand total.
-- Formula-generated final total vs printed PDF total.
+- Printed line amount versus quantity × unit price.
+- Sum of line items versus printed section subtotal.
+- Accepted subtotals versus printed grand total.
+- Subtotal rows mistakenly included as regular items.
+- Carried-forward subtotal counted twice.
+- Tax/overhead/profit lines already included in total.
+- Final formula result versus printed total.
+- Source-page mapping versus exported row references.
+- Billable-page list versus pages that contributed meaningful rows/recap records to this export.
 
-A mismatch does not automatically prove that OCR is wrong: source documents may contain rounding, copied formula errors, manual adjustments or conventions that were not extracted. Display the difference and let the user decide.
+Mismatch may originate from OCR/extraction error, source rounding, copied spreadsheet errors, manual adjustments or rules not visible in the PDF. Show printed value, calculated value and difference; allow review instead of silently correcting the source.
 
 ## Formatting and fidelity
 
 - Preserve source row order and section hierarchy.
-- Keep descriptions editable and readable, wrapping text rather than clipping or merging it into neighboring items.
-- Use currency/number formats consistent with the detected/confirmed locale.
-- Distinguish section headers and totals with clear formatting.
-- Include the source page and a review status for traceability.
-- Provide a clean workbook, not only a pixel-perfect imitation of the PDF.
-- Template-matched export can be added later for known templates, with its own explicit acceptance tests.
+- Keep descriptions editable and wrapped.
+- Align numeric columns consistently and use supported locale formatting.
+- Distinguish headers and totals with formatting, not destructive merges.
+- Include source page and review status.
+- Produce a clean structured workbook rather than a pixel-perfect imitation.
+- Template-matched exports are later scope with independent acceptance tests.
 
 ## Export acceptance gate
 
-A release cannot claim “Excel with formulas” until:
-- the output is a valid XLSX;
-- formula cells exist for eligible rows;
-- formulas recalculate correctly when quantities or rates are modified;
-- section and grand totals follow the documented rule;
-- discrepancies with printed source values are visible;
-- formula provenance is accurately labelled.
+Do not claim “Excel with formulas” until the file is a valid XLSX; eligible formulas exist and recalculate; totals follow documented membership rules; discrepancies are visible; provenance is correct; source values remain recoverable; billable page count and charge match the job ledger and export manifest.
