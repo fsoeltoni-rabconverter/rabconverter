@@ -2,6 +2,11 @@
 
 Dokumen ini adalah source of truth untuk produk, perilaku, data dan implementasi RabConverter. Jika dokumen bertentangan, ikuti urutan otoritas di bawah dan catat penyelesaiannya di decision log. Dokumen bukan bukti implementasi. Perubahan perilaku harus menyinkronkan semua dokumen otoritas serta acceptance criteria dalam satu perubahan yang dapat ditinjau.
 
+## Implementation planning and tracking
+
+- [implementation-plan.md](implementation-plan.md) — urutan fase, dependency, exit gate, dan bukti wajib. Dokumen ini mengatur delivery; tidak menggantikan dokumen domain di bawah.
+- [implementation-tracker.md](implementation-tracker.md) — snapshot status tingkat proyek dan tautan ke GitHub Issues yang menjadi tracker kerja operasional. Status Done harus didukung evidence, bukan sekadar kode ditulis atau PR dibuat.
+
 ## Urutan otoritas dokumen
 
 1. [product-definition.md](product-definition.md) — promise, scope dan batas formula reconstruction.
