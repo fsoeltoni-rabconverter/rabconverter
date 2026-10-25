@@ -70,7 +70,7 @@ If required verification fails, either safely fix/regenerate and re-verify, or m
 - Descriptions stay editable and wrapped; numeric columns scan consistently.
 - Distinguish source and calculated values without destructive merges.
 - Include source page and review status; deliver a clean structured workbook, not a pixel-perfect page facsimile.
-- Each output is an immutable artifact version. Regeneration after a correction creates a new version attached to the same job; it does not create a new job or duplicate the job charge.
+- Each output is an immutable artifact version. Regeneration after a correction creates a new version attached to the same job; it does not create a new job or duplicate the customer job charge, even if the corrected export is downloaded again.
 - If a confirmed correction changes final billability/amount after settlement, handle it only through an explicit, audited compensating ledger entry under the pricing policy; never silently alter settled history.
 
 ## Billable-page contract
