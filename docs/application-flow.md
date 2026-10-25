@@ -139,8 +139,6 @@ History, detailed transaction ledger and account settings remain secondary desti
 15. Provider timeout: the existing provider job/request is checked before any safe retry; provider-attempt cost/usage is recorded.
 16. Corrected export: same job, new immutable artifact version, no second customer charge; post-settlement amount correction uses a compensating ledger entry.
 17. Provider verifies a payment after local order expiry: reconciliation required until exactly-once credit or explicit refund/reversal is resolved.
-15. Provider timeout: the existing provider job/request is checked before any safe retry; provider-attempt cost/usage is recorded.
-16. Corrected export: same job, new immutable artifact version, no second customer charge; post-settlement amount correction uses a compensating ledger entry.
 
 ## 9. Relationship to the other documents
 
