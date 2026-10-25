@@ -1,6 +1,6 @@
 # RAB Document and Page Taxonomy
 
-Status: specification v1.0 — 2026-10-25. Document classification and billing share stable source-page identities.
+Status: specification v1.1 — 2026-10-25. Classification and billing use stable source-page identities.
 
 ## Document classes
 
@@ -17,53 +17,52 @@ Status: specification v1.0 — 2026-10-25. Document classification and billing s
 
 ## Page classes for processing
 
-Each source page has one primary page classification:
-- **rab_boq_rows:** one or more work-item/line/recap records are visible.
-- **recap_or_total:** identifiable subtotal/grand-total/adjustment record.
-- **header_or_cover_only:** cover/title/header without usable RAB/BOQ content.
-- **blank_or_decoration:** blank, page number, margin, decorative line or footer only.
-- **unrelated_appendix:** content unrelated to RAB/BOQ extraction promise.
-- **drawing_only:** drawing with no usable RAB/BOQ table/recap data.
-- **unreadable_or_failed:** corrupt or unreadable page, or extraction produced no meaningful record.
-- **unknown_needs_review:** insufficient evidence to classify.
+Each source page has one primary classification:
+- `rab_boq_rows`: one or more substantive work-item records.
+- `recap_or_total`: a substantive subtotal/grand-total/adjustment record with usable value/context.
+- `header_or_cover_only`: cover/title/header without usable RAB/BOQ record.
+- `blank_or_decoration`: blank, page number, margin, decorative line or footer only.
+- `notes_only`: supporting notes/specifications/assumptions without substantive RAB/BOQ data.
+- `unrelated_appendix`: content unrelated to the RAB/BOQ extraction promise.
+- `drawing_only`: drawing with no usable RAB/BOQ table/recap record.
+- `unreadable_or_failed`: corrupt/unreadable page or extraction produced no meaningful record.
+- `unknown_needs_review`: insufficient evidence to classify.
 
-Row classes include project/document header, column header, section/group heading, work item, continuation, note/assumption, subtotal, carried-forward subtotal, grand total, tax/overhead/profit/contingency adjustment, blank/footer and unknown.
+Row classes include document header, column header, section/group heading, work item, continuation, note/assumption, subtotal, carried-forward subtotal, grand total, tax/overhead/profit/contingency adjustment, blank/footer and unknown.
 
-## Common Indonesian column labels
+## Column labels and formula boundary
 
-Common aliases include No/Kode, Uraian Pekerjaan, Volume, Satuan, Harga Satuan and Jumlah/Total. Preserve original header labels while mapping to canonical fields. Column order is not fixed.
+Common aliases include No/Kode, Uraian Pekerjaan, Volume, Satuan, Harga Satuan and Jumlah/Total. Preserve original header labels. Column order varies.
 
-## Formula reconstruction
+- Amount = quantity × unit price only when source columns/meaning are clear.
+- Subtotal only with clear section boundaries and included amount rows.
+- Grand total only with clear recap inclusion/order.
+- Tax/overhead/profit/contingency formula only if base, rate, order and inclusion/exclusion are explicit or confirmed.
+- Preserve printed amounts separately; unresolved cases warn rather than silently substitute.
 
-- Amount = quantity × unit price only when source columns and semantics are clear.
-- Subtotal only when section boundaries and included amount rows are clear.
-- Grand total only when recap inclusion/order is clear.
-- Tax/overhead/profit/contingency formula only when base, rate, order and inclusion/exclusion rules are explicit or confirmed.
-- Preserve printed source amount separately and compare with calculated result.
-- Ambiguous cases stay unresolved and generate warnings; never silently substitute a calculated value.
+## Canonical billable-page rule
 
-## Billable-page classification
+Billing assessment is deterministic application logic after export—not a provider-returned field or an LLM decision.
 
-Billable assessment is deterministic product logic after extraction, not a provider-returned billing field and not an LLM decision.
+A source page is billable only when it contributes at least one **substantive and identifiable RAB/BOQ record** that is retained in the verified downloadable XLSX and linked to its source page.
 
-A source page is billable only if it contributes at least one meaningful, identifiable RAB/BOQ record to an XLSX artifact successfully generated and made available to the user. The record must have source-page provenance and include substantive data such as code, description, unit, quantity, price, printed amount, section, subtotal or recap data.
+**Sufficient examples:** a meaningful actual work-item row (description/code and available quantity/unit/rate/printed amount fields), or a subtotal/recap record with an actual usable financial/quantity value and enough source context to identify what it represents.
 
-Not billable: blank/decoration pages; cover/title page without RAB data; unrelated appendix; drawing-only page; failed/unreadable page with no usable record; duplicate page contributing no new retained record; provider output discarded before export.
+**Not sufficient by itself:** section/title heading, column header, footer, page number, note, assumption or specification without substantive RAB/BOQ data. The page is also not billable if blank, unrelated, drawing-only, unreadable/failed, duplicate-with-no-new-record, or its provider output was discarded before export.
 
-A repeated header does not make a page non-billable if actual RAB rows are retained. A recap page can be billable when its subtotal/total record is represented in the XLSX. Warnings do not themselves make a page non-billable if meaningful row data was recovered. Billability is not an accuracy guarantee.
+A repeated header plus real work-item rows is billable. A warning does not itself make a page non-billable. Billability is not a guarantee of full correctness.
 
-Each assessment records billable flag, reason code, usable-record count, source-page number, export-artifact ID and classifier version. Deduplicate by job/source-document/page. User charge is final billable-page count × the job's price snapshot; provider attempt count is never the billing unit.
+Each assessment records billable flag, reason code, substantive-record count, source page, export-artifact ID, export-manifest reference and policy version. `JobPageBillingAssessment` is the canonical final decision; any convenience flag on `SourcePage` is only a projection. Deduplicate per job/source page/policy/artifact. Charge is final billable-page count × job price snapshot.
 
-## Processing sequence
+## Processing summary
 
-1. Validate file and page count.
-2. Identify page classes and unsupported content.
-3. Extract page layout, words, coordinates and table candidates.
-4. Segment rows, headers and page continuations.
-5. Map semantic columns and preserve raw values.
-6. Normalize numeric values with locale provenance.
-7. Classify rows and source pages.
-8. Reconstruct supported formula candidates.
-9. Reconcile and create review warnings.
-10. Create and verify XLSX.
-11. Finalize page-level billability and one idempotent job charge only after a usable artifact exists.
+1. Validate file and count pages.
+2. Classify each page/document.
+3. Extract tables/layout with provenance.
+4. Segment rows and continuations.
+5. Map fields and preserve source values.
+6. Normalize numeric formats only when safe.
+7. Reconstruct supported formulas, validate and flag discrepancies.
+8. Export and verify XLSX.
+9. Assess substantive billable pages against the actual export manifest.
+10. Atomically settle once or charge zero and release the reservation.

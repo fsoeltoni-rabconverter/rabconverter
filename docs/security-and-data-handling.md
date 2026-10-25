@@ -1,64 +1,69 @@
 # Security and Data Handling — RabConverter
 
+Status: security/operations requirements, not implementation evidence.
+
 ## Data classification
 
-PDF RAB/BOQ, extracted text, rate/price information, client/project identities, supplier rates, locations, tender conditions and derived XLSX can be commercially confidential. Treat originals, extracted data, warnings, exports, wallet records and payment references as private customer data.
+PDF RAB/BOQ, extracted rows, client/project identities, supplier rates, tender conditions and XLSX exports may be commercially confidential. Originals, extracted data, warnings, exports, wallet records and payment references are private customer data.
 
-## App and storage requirements
+## Identity, access and storage
 
-- Enforce authenticated ownership for jobs, source pages, extraction runs, exports, wallet and ledger.
-- Use private storage; never publish public URLs for tender PDFs or XLSX artifacts.
-- Use short-lived signed downloads or authenticated proxy delivery.
-- Apply Supabase RLS to every customer-owned record and storage object. Test cross-user access explicitly.
-- Keep service-role/database credentials and provider/payment keys out of browser bundles, source control, logs, workflow artifacts and test snapshots.
-- Keep secrets in cloud secret management/GitHub Actions secrets. Only intended public/publishable keys may reach browser; RLS and least privilege remain mandatory.
-- Validate file signature, MIME, page count, bytes, encryption/corruption and runtime/resource limits.
-- Treat imported content/provider responses as untrusted data; escape/render safely and validate schema.
-- Never execute PDF JavaScript, spreadsheet macros or embedded active content.
-- Do not log raw PDF/page text, page images, unit prices, full signed URLs, tokens, wallet-sensitive details or secrets.
-- Keep stable error codes and redacted bounded diagnostics.
-- Use checksum deduplication without disclosing whether another customer uploaded the same document.
+- Allow local/basic preflight before login only when this can be done without durable, publicly reachable server storage.
+- Require Supabase Auth before creating a durable owner-scoped job/source, retaining an uploaded file in server storage, invoking paid Reducto processing, or using wallet/payment functions. The MVP does not support guest wallet/paid processing.
+- If pre-login upload cannot be safely bound to the later identity, ask the user to reselect the file after sign-in; do not expose a public temporary URL.
+- Enforce authenticated ownership for jobs, pages, extraction runs, exports, wallet, ledger and payment orders/events.
+- Use private Supabase Storage buckets; never publish public tender-PDF/XLSX URLs. Download through an authenticated proxy or short-lived signed URL scoped to the owner.
+- Enable RLS on every customer-owned table in an exposed schema and set least-privilege SQL grants as well as policies. Test both allowed and denied operations across users and roles.
+- Keep Supabase service-role/database credentials and provider/payment keys outside browser bundles, source control, logs, CI artifacts and test snapshots. Keep secrets in server/cloud secret management only.
+- Validate file signature, MIME, page count, bytes, encryption/corruption, configured timeouts and resource limits.
+- Treat imported content/provider output as untrusted; validate schema and escape/render safely. Never execute embedded PDF JS, macros or active content.
+- Do not log raw page text/images, unit rates, full signed URLs, tokens, secrets or sensitive payment payloads. Use bounded, redacted error diagnostics.
+- Use checksum deduplication without revealing whether another user uploaded the same document.
+
+## Privileged database operations
+
+- Wallet reservation, charge, release and verified credit must execute in an atomic transaction/guarded database function; do not trust browser-calculated balances.
+- Prefer SECURITY INVOKER functions. If SECURITY DEFINER is required, pin an empty/explicit search_path, fully qualify objects, validate owner/job/order inside the function and restrict execute privileges (revoke broad public/anon access and grant only required roles).
+- Test concurrent reservation, no-negative-balance, duplicate idempotency key with same/different payload, terminal job update, RLS bypass and cross-user access.
+- Keep job state and billing state distinct; a late worker cannot revive terminal states or settle after expiry.
 
 ## Reducto provider privacy gate
 
-Reducto Deep Extract is the only initial provider, but selecting it does not automatically approve sending customer documents. Before real customer data is sent, record and review the exact account/plan terms for:
-- data retained, duration and deletion method;
-- whether inputs/outputs can be used for model training or service improvement;
-- processing/storage region and subprocessor/data transfer details;
-- applicable DPA/contract terms and user notice/consent;
-- retention of request logs, page images, outputs and backups;
-- API endpoint/configuration, file/page limits, request timeout and retry behavior;
-- current pricing, usage metering and export/retention behavior.
+Reducto Deep Extract is the sole initial provider, but selecting it does not approve sending customer data. Before using real documents, record and review the exact account/plan terms for:
+- retention duration and deletion method for inputs, page images, outputs, logs and backups;
+- model training/service-improvement use of inputs/outputs;
+- processing/storage region, subprocessors, data transfer and applicable DPA/terms;
+- endpoint/configuration, limits, timeouts, retries and usage-metering unit;
+- current account pricing and aggregate usage export availability;
+- provider job ID/request ID persistence and timeout/status-check semantics before retry.
 
-The public Reducto pricing page advertises zero-data-retention agreement and EU/AU residency as higher-tier features; do not assume the Standard account automatically has those terms. Verify the actual plan and contract. Until the privacy gate is signed off, use synthetic or legally approved fixtures only. Do not add LlamaExtract or Pulse Ultra 2 as a fallback.
+The public pricing page advertises zero-data-retention and EU/AU data residency as higher-tier features; do not assume Standard includes them. Keep real customer documents blocked until this privacy gate is approved. Use synthetic or licensed fixtures.
 
-## Billing, wallet and payment security
+## Payment and wallet security
 
-- Monetary computation and billable-page assessment run server-side; the browser cannot choose page count, amount, paid state or balance.
-- Keep IDR as integer rupiah and perform wallet changes transactionally.
-- Enforce unique idempotency keys for top-up credit, provider payment events, page charge and reversal.
-- Verify webhook signature/authenticity, event identity, amount, currency and merchant/order references before crediting wallet.
-- Do not accept redirect parameters, screenshots or client-side events as proof of payment.
-- Prevent replay, duplicate callback, amount mismatch and concurrent spend.
-- Ledger entries are immutable; corrections use linked compensating entries with actor/reason.
-- Use least-privilege database functions and test for negative balance, race conditions, RLS bypass and cross-user access.
-- Do not store unnecessary payment card/QRIS credentials or raw sensitive callback payloads.
+- Payment gateway is not selected. QRIS is a preferred method to evaluate, not a live capability.
+- Verify webhook signature/authenticity plus provider event ID, order ID, exact amount, currency and expected status before crediting.
+- Expect duplicate, delayed and out-of-order callbacks; persist unique provider event IDs and make processing idempotent.
+- Payment state paid means provider payment was verified; credited means the wallet ledger credit committed exactly once. UI exposes credited balance only after the ledger transaction completes.
+- Redirect URLs, client events and screenshots cannot mark an order paid/credited.
+- If the provider verifies payment after the local order expiry, mark `reconciliation_required`; reconcile the provider's final order/payment status before exactly-once credit or an explicit refund/reversal. Never auto-credit from the client or auto-start conversion.
+- Keep ledger immutable. Corrections use linked compensating entries with actor/reason. Do not store unnecessary raw card/QRIS secrets or callback payloads.
 
 ## Formula and source integrity
 
-- Store printed source amounts separately from reconstructed calculation/result.
-- Label formula provenance; do not claim formula recovery from PDF.
-- Show mismatch; never silently overwrite printed values or insert market prices/taxes/overhead/profit.
-- Keep parser/provider/pipeline version and page provenance in metadata/export warnings.
+- Store printed source values separately from normalized/reconstructed values and calculated results.
+- Label formula provenance; never claim formula recovery from a PDF.
+- Show mismatches rather than silently replacing printed values or inserting market prices, taxes, overhead or profit.
+- Preserve parser/provider/pipeline version and page provenance in metadata and warnings.
 
 ## Retention, deletion and recovery
 
-Before production, define retention for source PDFs, extracted data, exports, provider-side data, payment events and security logs. Deleting a job must remove metadata and artifacts according to the published policy and provider capabilities, with any controlled recovery window documented. Financial ledger and payment reconciliation records may require retention distinct from source documents; do not promise complete account deletion until legal/accounting obligations are reviewed.
+Before production, define retention/expiry for temporary preflight uploads, source PDFs, extracted rows, exports, provider-side data, payment events and security logs. A user deleting a job must remove source/derived files according to the published policy and provider contract; financial ledger and payment reconciliation records may require a separate lawful retention period. Do not promise complete account erasure until those obligations and provider deletion capabilities are reviewed.
 
-## Incident response
+Reservation expiry/worker recovery must be implemented before paid launch. Expired/canceled jobs release holds once; late workers cannot revive or charge them. For each provider attempt, record provider job/request ID, attempt number, usage unit/quantity, status, retry cause, latency and reported cost/currency when available; redact secrets and document content. Check the existing provider job status before retrying a timed-out request. Keep enough safe metadata to reconcile ambiguous financial states without logging confidential document content.
 
-If a key is exposed, rotate/revoke it and inspect logs/history rather than relying only on deleting source history. If a document becomes public, revoke access, identify affected objects/URLs/logs, contain exposure, notify the owner as required and record the incident before resuming deployment.
+## Incident response and release gates
 
-## Release gates
+If a key is exposed, rotate/revoke it and inspect access logs. If a document becomes public, revoke access, identify affected objects/URLs/logs, contain exposure, notify the owner as required and record the incident before resuming deployment.
 
-Do not send real customer PDFs to Reducto, collect real payments or enable production wallet charges until privacy/retention terms, secret handling, RLS, webhook verification, idempotency, ledger reconciliation and deletion behavior are tested and approved.
+Do not send real customer PDFs to Reducto, collect payments, or enable production wallet charges until provider privacy/retention terms, auth/RLS/grants, secret handling, webhook verification, idempotency, expiry/recovery, ledger reconciliation and deletion behavior are tested and approved.
