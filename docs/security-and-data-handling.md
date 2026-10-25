@@ -1,36 +1,44 @@
-# Security and Data Handling
+# Security and Data Handling — RAB PDF Conversion
 
 ## Data classification
 
-Tender documents may include commercially sensitive pricing, client/project details, drawings, contractual terms, and company qualification data. Treat uploads and extracted values as private customer data.
+PDF RAB/BOQ uploads and extracted data can disclose confidential client information, tender prices, margins, project locations, drawings, contract terms and supplier rates. Treat source PDFs and derived workbooks as private customer data.
 
-## Minimum rules
+## Minimum requirements
 
-- Require authenticated ownership for job listings, source files, extraction results and exports.
-- Use private storage by default; do not publish public URLs for tender sources.
-- Use short-lived signed download URLs or authorized downloads as appropriate.
-- Use Supabase RLS for all user-owned database records and storage policies tied to user/job ownership.
-- Do not include file content, extracted tender text, access tokens, service role keys or credentials in logs, test snapshots, GitHub artifacts or analytics.
-- Store secrets only in GitHub Actions secrets, Supabase/Cloudflare secret management; never in source files or browser environment variables.
-- The Supabase publishable key may be client-facing by design, but only with correct RLS and least privilege. Service role credentials must never reach the browser.
-- Validate file signature, media type, byte/page/sheet limits and parser runtime.
-- Never execute spreadsheet macros or active embedded content.
-- Limit ZIP decompression and prevent archive path traversal if archives are later supported.
-- Escape imported text when rendered in the UI; uploaded content is untrusted data, not instructions to the application.
-- Record only stable error codes and redacted diagnostics.
-- Define retention, deletion, backup and recovery expectations before production use.
-- Clear both metadata and object storage artifacts when deletion is requested, with a controlled recovery window only if policy requires it.
+- Require an authenticated owner for job listing and access to source/output artifacts if accounts are enabled.
+- Use private storage by default; never make tender PDFs publicly readable.
+- Use authorized downloads or short-lived signed URLs.
+- Apply Supabase RLS to user-owned job metadata and storage policies tied to file/job ownership.
+- Keep service-role credentials out of browsers, source control and public logs.
+- Keep secrets only in GitHub Actions secrets and cloud secret stores.
+- Validate file signatures, media type, size, page count, encryption state and parser resource limits.
+- Treat extracted content as untrusted text; escape it when rendered.
+- Never execute PDF scripts, spreadsheet macros or other embedded active content.
+- Do not log raw PDF text, page images, pricing data, session tokens or full signed URLs.
+- Record stable error codes and redact diagnostics.
+- Define retention, deletion, backup and recovery policy before production.
+- A delete action should remove job metadata and source/output artifacts according to the published retention policy.
+- Use checksum deduplication without exposing whether another customer has uploaded the same file.
 
-## Data-processing providers
+## Formula and source-value integrity
 
-Before sending source documents to any third-party parser/OCR/AI provider, document:
-- What file content is transmitted.
-- Region/retention/training terms and applicable DPA.
-- Maximum file sizes and request timeouts.
-- Pricing and expected cost per page/file.
-- Failure handling and ability to process without the provider.
-- How user consent and deletion apply.
+- Preserve the displayed PDF amount as source evidence separately from the reconstructed formula/result.
+- Never claim a formula recovered from PDF is the original source formula.
+- Formula-vs-source discrepancies must be visible, not silently overwritten.
+- Do not silently insert rates, taxes, overhead, profit or quantities.
+- Keep formula provenance and parser version in export metadata/warnings.
+
+## Third-party processing
+
+Before sending documents to any external parser/OCR/AI provider, record:
+- File data transmitted and processing location.
+- Retention/training terms and any relevant DPA.
+- Page/size limits and timeouts.
+- Cost per page/document and retry behavior.
+- Whether user consent/notice is needed.
+- Deletion and provider fallback behavior.
 
 ## Incident response
 
-If a secret is exposed, rotate it rather than deleting it only from history. If tender documents become publicly accessible, revoke access, identify affected objects/logs, contain the exposure and record the incident before resuming changes.
+If a credential is exposed, rotate it rather than relying only on deletion from source history. If a document is accidentally public, revoke access, identify affected objects/logs, contain exposure and record the incident before resuming changes.
