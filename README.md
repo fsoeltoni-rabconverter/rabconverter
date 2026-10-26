@@ -1,6 +1,6 @@
 # RabConverter
 
-**Upload PDF RAB. Dapatkan Excel yang bisa diedit dengan rumus perhitungan.**
+**Ubah tabel RAB atau BoQ dari PDF menjadi Excel yang bisa diedit.**
 
 Versi pertama fokus pada satu alur: **upload → cek kuota → konversi → potong kuota jika berhasil → download**.
 
@@ -34,4 +34,11 @@ Formula yang dibuat adalah formula hasil rekonstruksi, bukan formula asli yang b
 
 ## Status setup
 
-Fondasi frontend dan CI sedang disiapkan. Preview pertama adalah **preview UI**: pemilihan file berfungsi, tetapi file tidak dikirim ke server dan kuota/konversi belum aktif sampai langkah backend berikutnya selesai.
+Fondasi frontend dan CI sedang disiapkan. Preview saat ini adalah **preview UI**: pemilihan file berfungsi, tetapi file tidak dikirim ke server dan konversi belum aktif. Jangan mengiklankan hasil XLSX sebagai fitur aktif sebelum backend konversi selesai dan lolos pengujian.
+
+## SEO
+
+- Metadata, canonical sementara, structured data dasar, serta robots/sitemap berada di HTML dan folder `public/`.
+- Canonical dan URL sitemap saat ini memakai host preview Cloudflare. Ganti ke domain produksi yang disepakati sebelum peluncuran publik.
+- Konten landing page secara eksplisit menjelaskan batasan preview agar tidak menjanjikan konversi, OCR, atau formula yang belum tersedia.
+- Checklist: `docs/seo.md`.
