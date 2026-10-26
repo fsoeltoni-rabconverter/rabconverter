@@ -4,13 +4,13 @@
   "billable_pages": [1, 2],
   "rows": [
     {"page": 1, "kind": "section", "description": "SECTION A PEKERJAAN STRUKTUR", "unit": null, "quantity": null, "unit_price": null, "printed_amount": null, "formula_candidate": null, "warning": null},
-    {"page": 1, "kind": "item", "description": "BETON K-250", "unit": "m3", "quantity": 12, "unit_price": 1250000, "printed_amount": 15000000, "formula_candidate": "=D3*E3", "warning": null},
-    {"page": 1, "kind": "item", "description": "BESI TULANGAN", "unit": "kg", "quantity": 850, "unit_price": 14000, "printed_amount": 11900000, "formula_candidate": "=D4*E4", "warning": null},
-    {"page": 1, "kind": "page_total", "description": "PAGE TOTAL", "unit": null, "quantity": null, "unit_price": null, "printed_amount": 26900000, "formula_candidate": "=SUM(F3:F4)", "warning": null},
+    {"page": 1, "kind": "item", "description": "BETON K-250", "unit": "m3", "quantity": 12, "unit_price": 1250000, "printed_amount": 15000000, "formula_candidate": "quantity * unit_price", "warning": null},
+    {"page": 1, "kind": "item", "description": "BESI TULANGAN", "unit": "kg", "quantity": 850, "unit_price": 14000, "printed_amount": 11900000, "formula_candidate": "quantity * unit_price", "warning": null},
+    {"page": 1, "kind": "page_total", "description": "PAGE TOTAL", "unit": null, "quantity": null, "unit_price": null, "printed_amount": 26900000, "formula_candidate": "sum of retained item amounts on page", "warning": null},
     {"page": 2, "kind": "section_continuation", "description": "SECTION A PEKERJAAN STRUKTUR (LANJUTAN)", "unit": null, "quantity": null, "unit_price": null, "printed_amount": null, "formula_candidate": null, "warning": null},
-    {"page": 2, "kind": "item", "description": "BEKISTING", "unit": "m2", "quantity": 120, "unit_price": 175000, "printed_amount": 21000000, "formula_candidate": "=D7*E7", "warning": null},
-    {"page": 2, "kind": "subtotal", "description": "SUBTOTAL SECTION A", "unit": null, "quantity": null, "unit_price": null, "printed_amount": 47900000, "formula_candidate": "=SUM(F3:F4,F7)", "warning": null},
-    {"page": 2, "kind": "grand_total", "description": "GRAND TOTAL", "unit": null, "quantity": null, "unit_price": null, "printed_amount": 47900000, "formula_candidate": "=F8", "warning": null}
+    {"page": 2, "kind": "item", "description": "BEKISTING", "unit": "m2", "quantity": 120, "unit_price": 175000, "printed_amount": 21000000, "formula_candidate": "quantity * unit_price", "warning": null},
+    {"page": 2, "kind": "subtotal", "description": "SUBTOTAL SECTION A", "unit": null, "quantity": null, "unit_price": null, "printed_amount": 47900000, "formula_candidate": "sum of retained item amounts in section", "warning": null},
+    {"page": 2, "kind": "grand_total", "description": "GRAND TOTAL", "unit": null, "quantity": null, "unit_price": null, "printed_amount": 47900000, "formula_candidate": "reference the verified section subtotal", "warning": null}
   ],
   "expected_reconciliation": {"sum_item_amounts": 47900000, "printed_subtotal": 47900000, "printed_grand_total": 47900000, "match": true}
 }
