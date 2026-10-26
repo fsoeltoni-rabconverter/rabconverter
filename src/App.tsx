@@ -80,11 +80,11 @@ export default function App() {
 
       <main className="main-content">
         <div className="hero-copy">
-          <div className="eyebrow"><span className="eyebrow-line" /> DOKUMEN JADI DATA, LEBIH CEPAT</div>
-          <h1>PDF RAB ke Excel.<br /><span>Tanpa input ulang.</span></h1>
+          <div className="eyebrow"><span className="eyebrow-line" /> PDF RAB MENJADI EXCEL</div>
+          <h1>RAB PDF ke Excel.<br /><span>Tanpa Ketik Ulang.</span></h1>
           <p className="hero-description">
-            Ubah Rencana Anggaran Biaya menjadi spreadsheet yang bisa diedit,
-            lengkap dengan rumus perhitungan yang dapat diperiksa.
+            Ubah tabel RAB atau BoQ dari PDF menjadi file Excel yang bisa diedit.
+            Kurangi pekerjaan salin-tempel uraian pekerjaan, volume, satuan, dan harga satuan secara manual.
           </p>
         </div>
 
@@ -105,8 +105,8 @@ export default function App() {
                 <div className="float-tag tag-pdf">PDF</div>
                 <div className="float-tag tag-xlsx">XLSX <span>↗</span></div>
               </div>
-              <h2>Mulai dari PDF RAB kamu</h2>
-              <p className="upload-hint">Tarik file ke sini, atau pilih dari perangkat.</p>
+              <h2>Mulai dari PDF RAB atau BoQ kamu</h2>
+              <p className="upload-hint">Tarik file ke sini, atau pilih PDF RAB/BoQ dari perangkat.</p>
               <button className="primary-button" type="button" onClick={() => inputRef.current?.click()}>
                 <span>Pilih PDF RAB</span><ArrowIcon />
               </button>
@@ -116,7 +116,7 @@ export default function App() {
             <div className="selected-state">
               <div className="selected-file-icon"><FileIcon /></div>
               <div className="selected-copy">
-                <span className="selected-kicker">FILE DIPILIH</span>
+                <span className="selected-kicker">PDF DIPILIH</span>
                 <strong title={selectedFile.name}>{selectedFile.name}</strong>
                 <span>{formatBytes(selectedFile.size)} · PDF</span>
               </div>
@@ -138,9 +138,9 @@ export default function App() {
         <div className="reassurance-row">
           <div className="reassurance-item"><span className="reassurance-icon">↗</span><span>Excel bisa diedit</span></div>
           <span className="reassurance-separator" />
-          <div className="reassurance-item"><span className="reassurance-check">✓</span><span>Rumus perhitungan</span></div>
+          <div className="reassurance-item"><span className="reassurance-check">✓</span><span>Kurangi input manual</span></div>
           <span className="reassurance-separator" />
-          <div className="reassurance-item"><span className="reassurance-check">✓</span><span>Bayar saat berhasil</span></div>
+          <div className="reassurance-item"><span className="reassurance-check">✓</span><span>Periksa hasil sebelum dipakai</span></div>
         </div>
       </main>
 
