@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent, type DragEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from "react";
 
 const MAX_FILE_SIZE_BYTES = 30 * 1024 * 1024;
 
@@ -31,6 +31,19 @@ export default function App() {
   const [dragging, setDragging] = useState(false);
   const [message, setMessage] = useState("");
   const pickerOpenRef = useRef(false);
+
+  useEffect(() => {
+    const input = inputRef.current;
+    if (!input) return;
+
+    const handleCancel = () => {
+      // Native file-picker cancellation should only release the open guard.
+      pickerOpenRef.current = false;
+    };
+
+    input.addEventListener("cancel", handleCancel);
+    return () => input.removeEventListener("cancel", handleCancel);
+  }, []);
 
   function validateAndSetFile(file?: File) {
     setMessage("");
@@ -71,10 +84,6 @@ export default function App() {
     event.target.value = "";
   }
 
-  function handleInputCancel() {
-    // Cancelling is not an error and must not change the current file selection.
-    pickerOpenRef.current = false;
-  }
 
   function handleDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
@@ -147,7 +156,7 @@ export default function App() {
               <p className="file-limit">File belum dikirim ke server.</p>
             </div>
           )}
-          <input ref={inputRef} className="visually-hidden" type="file" accept="application/pdf,.pdf" onChange={handleInputChange} onCancel={handleInputCancel} aria-label="Pilih dokumen PDF RAB" />
+          <input ref={inputRef} className="visually-hidden" type="file" accept="application/pdf,.pdf" onChange={handleInputChange} aria-label="Pilih dokumen PDF RAB" />
           {message && <p className="error-message" role="alert">{message}</p>}
         </section>
 
