@@ -1,54 +1,39 @@
 # RabConverter
 
-**RabConverter mengubah PDF RAB/BOQ menjadi workbook Excel editable, dengan formula hasil rekonstruksi yang aktif saat struktur sumbernya cukup jelas.** Produk pertama ditujukan untuk kontraktor, estimator, dan staf administrasi proyek di Indonesia.
+**Ubah PDF RAB menjadi Excel yang bisa diedit, lengkap dengan rumus perhitungan.**
 
-## Pengalaman utama
+Versi pertama fokus pada satu tugas: konversi yang akurat dari upload sampai download.
 
-**Unggah PDF → konversi otomatis → unduh Excel.**
+## Alur utama
 
-remove.bg hanya menjadi benchmark kesederhanaan pengalaman pengguna: satu aksi utama, pemrosesan otomatis, hasil jelas, dan unduhan yang mudah. RabConverter tidak meniru teknologi, aset merek, atau model bisnisnya.
+1. User upload PDF RAB.
+2. Sistem menghitung halaman, mengecek kuota, dan menunjukkan estimasi biaya.
+3. Jika kuota cukup, sistem memproses PDF menjadi file Excel (.xlsx).
+4. Sistem memeriksa data dan rumus dasar.
+5. Jika konversi berhasil, kuota dikurangi satu kali sesuai halaman RAB yang berhasil dikonversi.
+6. User mengunduh Excel.
 
-Pengguna tidak wajib memeriksa seluruh tabel pada kasus normal. Sistem memvalidasi hasil otomatis, menampilkan warning untuk ketidakpastian yang dapat dipertahankan dengan aman, dan meminta keputusan pengguna hanya saat ambigu yang material benar-benar menghalangi keluaran yang aman.
+Jika konversi gagal atau file Excel yang layak tidak berhasil dibuat, kuota tidak dipotong.
 
-## Batas kejujuran produk
+## Harga awal
 
-PDF umumnya menyimpan hasil perhitungan yang tercetak, bukan formula dan referensi sel Excel asli. Formula yang dihasilkan RabConverter adalah **formula hasil rekonstruksi**, bukan formula asli yang dipulihkan. Nilai yang tidak jelas tidak boleh ditebak atau diam-diam diubah.
+- Tarif: **Rp2.500 per halaman yang ditagihkan**.
+- Minimum top-up: **Rp50.000**.
+- Estimasi sebelum proses memakai jumlah halaman PDF sebagai batas maksimal; pemotongan akhir mengikuti halaman berisi data RAB yang berhasil masuk ke Excel.
 
-## Workflow MVP
+## Prinsip akurasi
 
-1. Unggah PDF RAB/BOQ; validasi file dan hitung halaman sebelum proses berbayar.
-2. Tampilkan halaman, harga Rp2.500 per halaman tertagih sebagai estimasi maksimum, saldo, dan kekurangan saldo bila ada.
-3. Setelah pengguna memilih **Konversi PDF**, validasi intent, identitas pemilik, dan reservasi saldo secara atomik.
-4. Ekstrak menggunakan **Reducto Deep Extract sebagai satu-satunya provider awal**.
-5. Petakan kode item, uraian, satuan, volume, harga satuan, jumlah tercetak, section, subtotal dan total; simpan asal halaman dan nilai mentah.
-6. Rekonstruksi hanya rumus yang didukung struktur sumber, lalu bandingkan dengan angka tercetak.
-7. Bangun serta verifikasi workbook XLSX; review pengguna hanya jika dibutuhkan untuk keputusan material.
-8. Nilai halaman tertagih dari record RAB/BOQ substantif yang benar-benar tersimpan di workbook yang dapat diunduh; selesaikan satu tagihan idempotent atau nol jika tidak ada artefak.
+- Data, satuan, volume, harga satuan, subtotal, dan total tidak boleh ditebak.
+- Rumus Excel adalah rumus hasil rekonstruksi, bukan formula asli yang bisa dipulihkan dari PDF.
+- Nilai yang tidak terbaca dibiarkan kosong atau ditandai untuk diperiksa.
+- Hasil rumus dibandingkan dengan angka tercetak jika datanya memungkinkan.
 
-## Aturan harga awal
+## Dokumentasi
 
-- **Harga pengguna:** Rp2.500 per halaman tertagih.
-- **Top-up minimum:** Rp50.000. Ini minimum transaksi top-up, bukan biaya minimum per pekerjaan.
-- Halaman kosong, cover/judul saja, header/footer, catatan saja, halaman tidak relevan, gambar teknik saja, duplikat tanpa data baru, atau halaman gagal tanpa record RAB/BOQ substantif tidak ditagih.
-- Halaman yang memiliki baris RAB atau record subtotal/rekap substantif yang dipertahankan dalam hasil dapat ditagih, termasuk saat ada warning.
-- Tidak ada charge pelanggan jika XLSX yang bisa diunduh tidak dihasilkan. Reservasi harus dilepas pada semua akhir gagal atau kedaluwarsa.
-- Retry provider tidak menambah tagihan pelanggan. COGS provider tetap dicatat terpisah, termasuk untuk halaman yang tidak dapat ditagih.
-- Aturan kanonis ada di [docs/pricing-and-billing.md](docs/pricing-and-billing.md).
+- [Spesifikasi v1](docs/v1.md)
+- [Aturan akurasi dan pengujian](docs/accuracy.md)
+- [PDF uji sintetis](fixtures/golden/README.md)
 
-## Batas teknologi dan ruang lingkup
+## Status repo
 
-- PDF RAB/BOQ adalah input MVP; PDF berbasis teks menjadi golden path awal. Scan/campuran tetap terbatas hingga lulus golden tests.
-- **LlamaExtract dan Pulse Ultra 2 tidak dipakai** sebagai runtime provider, fallback otomatis, atau dependency.
-- RabConverter tidak mengarang harga pasar, AHSP, volume, pajak, overhead, keuntungan, ataupun aturan pembulatan.
-- Pengukuran volume dari gambar teknik, tender CRM, portal submission dan reproduksi template yang sempurna bukan MVP.
-- Nilai sumber dan hasil kalkulasi disimpan terpisah serta ditelusuri ke sumber.
-
-## Dokumentasi acuan
-
-Mulai dari [docs/README.md](docs/README.md). [Application flow](docs/application-flow.md) mengatur perilaku end-to-end; [pricing and billing](docs/pricing-and-billing.md) menjadi satu-satunya sumber kebenaran untuk harga, billability, wallet, top-up, charge, reversal dan COGS. Rencana delivery ada di [Implementation plan](docs/implementation-plan.md), sedangkan status dan issue kerja ada di [Implementation tracker](docs/implementation-tracker.md).
-
-## Infrastruktur saat ini
-
-Pengembangan direncanakan secara cloud-only: GitHub sebagai source of truth, GitHub Actions untuk pemeriksaan, Cloudflare untuk hosting/pekerjaan latar bila diperlukan, serta Supabase untuk identitas, metadata, akses data dan private storage.
-
-**Status diperiksa 2026-10-25:** repository berisi dokumentasi, belum ada aplikasi RabConverter yang dapat dijalankan yang terverifikasi. Pada akun Cloudflare yang tersambung tidak ditemukan Worker script maupun Pages project untuk RabConverter. Proyek Supabase Rab Converter aktif, tetapi belum memiliki tabel pada schema public. Belum ada preview aplikasi yang dapat diverifikasi. Jangan menyebut aplikasi, provider, billing, atau pembayaran live sebelum kode, integrasi, workflow, dan deployment benar-benar diperiksa.
+Repository ini belum memiliki aplikasi konversi yang dapat dijalankan yang sudah diverifikasi. Dokumen lama diringkas dan ditulis ulang agar implementasi berikutnya fokus pada alur inti dan akurasi, bukan arsitektur yang belum dibutuhkan.

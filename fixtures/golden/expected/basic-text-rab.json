@@ -1,0 +1,12 @@
+{
+  "fixture_id": "basic-text-rab",
+  "pages": 1,
+  "billable_pages": [1],
+  "rows": [
+    {"page": 1, "kind": "item", "description": "PEKERJAAN PERSIAPAN", "unit": "ls", "quantity": 1, "unit_price": 1500000, "printed_amount": 1500000, "formula_candidate": "quantity * unit_price", "warning": null},
+    {"page": 1, "kind": "item", "description": "SEMEN PORTLAND", "unit": "zak", "quantity": 10, "unit_price": 65000, "printed_amount": 650000, "formula_candidate": "quantity * unit_price", "warning": null},
+    {"page": 1, "kind": "item", "description": "PASIR BETON", "unit": "m3", "quantity": 2.5, "unit_price": 350000, "printed_amount": 875000, "formula_candidate": "quantity * unit_price", "warning": null},
+    {"page": 1, "kind": "subtotal", "description": "SUBTOTAL", "unit": null, "quantity": null, "unit_price": null, "printed_amount": 3025000, "formula_candidate": "sum of retained item amounts in section", "warning": null}
+  ],
+  "expected_reconciliation": {"sum_item_amounts": 3025000, "printed_subtotal": 3025000, "match": true}
+}

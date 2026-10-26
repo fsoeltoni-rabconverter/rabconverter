@@ -1,0 +1,12 @@
+{
+  "fixture_id": "ambiguous-and-nonbillable",
+  "pages": 1,
+  "billable_pages": [1],
+  "rows": [
+    {"page": 1, "kind": "item", "description": "ITEM DENGAN HARGA TIDAK TERBACA", "unit": "m2", "quantity": 10, "unit_price": null, "printed_amount": null, "formula_candidate": null, "warning": "unit price and printed amount are unknown; do not infer"},
+    {"page": 1, "kind": "item", "description": "CAT TEMBOK", "unit": "ls", "quantity": 1, "unit_price": 500000, "printed_amount": 500000, "formula_candidate": "quantity * unit_price", "warning": null},
+    {"page": 1, "kind": "note", "description": "Harga item 1 sengaja tidak tersedia.", "unit": null, "quantity": null, "unit_price": null, "printed_amount": null, "formula_candidate": null, "warning": null}
+  ],
+  "expected_reconciliation": {"known_item_amounts": 500000, "grand_total": null, "match": null},
+  "billing_rule_check": "page contains substantive RAB content, so page 1 is billable after verified delivery; unknown values do not create invented charges."
+}
