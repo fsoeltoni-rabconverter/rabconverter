@@ -17,6 +17,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body { margin: 0; min-width: 320px; min-height: 100vh; }
 button, input { font: inherit; }
 button { cursor: pointer; }
@@ -70,7 +71,7 @@ h1 span { color: #247454; }
   position: relative; transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
 }
 .upload-card.is-dragging { border-color: #3a9567; box-shadow: 0 0 0 4px rgba(58,149,103,.12), 0 20px 55px rgba(43,68,50,.08); transform: translateY(-2px); background: #fbfffb; }
-.upload-card h2 { font-family: "Manrope",sans-serif; font-size: 18px; letter-spacing: -.4px; font-weight: 800; margin: 15px 0 5px; }
+.upload-card h2 { width: min(100%, 440px); text-align: center; font-family: "Manrope",sans-serif; font-size: 18px; letter-spacing: -.4px; font-weight: 800; margin: 15px 0 5px; }
 .upload-hint { color: #849087; margin: 0 0 22px; font-size: 13px; }
 .upload-illustration { height: 105px; width: 180px; display: grid; place-items: center; position: relative; }
 .orbit { position: absolute; border: 1px solid #e5eee6; border-radius: 50%; transform: rotate(-16deg); }
@@ -84,6 +85,7 @@ h1 span { color: #247454; }
 .tag-xlsx span { font-size: 10px; margin-left: 4px; }
 
 .primary-button {
+  width: min(100%, 440px);
   display: inline-flex; align-items: center; justify-content: center; gap: 24px; border: 0; border-radius: 10px;
   padding: 13px 17px 13px 21px; min-width: 178px; color: #fff; background: var(--green-dark);
   font-size: 13px; font-weight: 700; box-shadow: 0 4px 8px rgba(14,77,55,.13);
@@ -96,7 +98,7 @@ h1 span { color: #247454; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 .error-message { color: #a63d35; font-size: 12px; margin: 16px 0 0; text-align: center; }
 
-.selected-state { width: 100%; max-width: 390px; display: grid; grid-template-columns: 54px 1fr 28px; gap: 13px; align-items: center; }
+.selected-state { width: 100%; max-width: 440px; display: grid; grid-template-columns: 54px 1fr 28px; gap: 13px; align-items: center; }
 .selected-file-icon { width: 54px; height: 60px; display: grid; place-items: center; background: #eaf3ec; border-radius: 12px; }
 .selected-copy { display: flex; flex-direction: column; min-width: 0; gap: 4px; }
 .selected-kicker { font-size: 9px; letter-spacing: 1.4px; font-weight: 800; color: #42815d; }
