@@ -1,5 +1,5 @@
 :root {
-  font-family: "DM Sans", sans-serif;
+  font-family: "Plus Jakarta Sans", sans-serif;
   color: #1c2823;
   background: #f7f8f6;
   font-synthesis: none;
@@ -42,12 +42,12 @@ button:disabled { cursor: not-allowed; opacity: .72; }
 .brand { display: inline-flex; align-items: center; gap: 11px; text-decoration: none; color: var(--ink); }
 .brand-mark {
   position: relative; display: grid; place-items: center; width: 35px; height: 35px; border-radius: 11px;
-  color: #fff; background: var(--green-dark); font-family: "Manrope",sans-serif;
+  color: #fff; background: var(--green-dark); font-family: "Plus Jakarta Sans",sans-serif;
   font-size: 20px; font-weight: 800; letter-spacing: 0; box-shadow: 0 5px 13px rgba(17,78,54,.14);
 }
 .brand-letter { display: block; line-height: 1; transform: translate(-1px, -1px); }
 .brand-dot { position: absolute; right: 7px; bottom: 6px; color: #a9d8a9; font-size: 12px; font-weight: 800; line-height: 1; letter-spacing: 0; }
-.brand-name { font-family: "Manrope",sans-serif; font-weight: 800; letter-spacing: -.5px; font-size: 17px; }
+.brand-name { font-family: "Plus Jakarta Sans",sans-serif; font-weight: 800; letter-spacing: -.5px; font-size: 17px; }
 .topbar-right { display: flex; align-items: center; gap: 18px; }
 .price-chip {
   padding: 9px 13px; display: inline-flex; align-items: center; gap: 7px; border: 1px solid #dfe7e0;
@@ -61,7 +61,7 @@ button:disabled { cursor: not-allowed; opacity: .72; }
 .hero-copy { width: min(100%, 440px); text-align: center; margin-bottom: 24px; }
 .eyebrow { display: inline-flex; align-items: center; gap: 9px; font-size: 10px; font-weight: 800; letter-spacing: 1.9px; color: #547363; margin-bottom: 17px; }
 .eyebrow-line { display: inline-block; width: 23px; height: 1px; background: #8aae98; }
-h1 { font-family: "Manrope",sans-serif; font-weight: 800; letter-spacing: -2.8px; line-height: 1.11; font-size: clamp(34px,3.6vw,48px); margin: 0; color: #1c2823; }
+h1 { font-family: "Plus Jakarta Sans",sans-serif; font-weight: 800; letter-spacing: -2.8px; line-height: 1.11; font-size: clamp(34px,3.6vw,48px); margin: 0; color: #1c2823; }
 h1 span { color: #247454; }
 .hero-description { margin: 14px auto 0; max-width: 440px; color: #707c74; line-height: 1.65; font-size: 14px; }
 
@@ -87,7 +87,7 @@ h1 span { color: #247454; }
 .empty-state .primary-button { width: 100%; }
 
 .upload-card.is-dragging { border-color: #3a9567; box-shadow: 0 0 0 4px rgba(58,149,103,.12), 0 20px 55px rgba(43,68,50,.08); transform: translateY(-2px); background: #fbfffb; }
-.upload-card h2 { width: min(100%, 440px); text-align: center; font-family: "Manrope",sans-serif; font-size: 18px; letter-spacing: -.4px; font-weight: 800; margin: 15px 0 5px; }
+.upload-card h2 { width: min(100%, 440px); text-align: center; font-family: "Plus Jakarta Sans",sans-serif; font-size: 18px; letter-spacing: -.4px; font-weight: 800; margin: 15px 0 5px; }
 .upload-hint { color: #849087; margin: 0 0 22px; font-size: 13px; }
 .upload-illustration { height: 105px; width: 180px; display: grid; place-items: center; position: relative; }
 .orbit { position: absolute; border: 1px solid #e5eee6; border-radius: 50%; transform: rotate(-16deg); }
