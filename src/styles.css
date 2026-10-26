@@ -57,10 +57,10 @@ button:disabled { cursor: not-allowed; opacity: .72; }
 .beta-label { color: #849088; font-size: 10px; font-weight: 700; letter-spacing: 1.4px; }
 
 .main-content { width: min(100%,790px); margin: 0 auto; padding: 70px 24px 46px; display: flex; flex-direction: column; align-items: center; flex: 1; }
-.hero-copy { text-align: center; margin-bottom: 34px; }
+.hero-copy { width: min(100%, 440px); text-align: center; margin-bottom: 34px; }
 .eyebrow { display: inline-flex; align-items: center; gap: 9px; font-size: 10px; font-weight: 800; letter-spacing: 1.9px; color: #547363; margin-bottom: 17px; }
 .eyebrow-line { display: inline-block; width: 23px; height: 1px; background: #8aae98; }
-h1 { font-family: "Manrope",sans-serif; font-weight: 800; letter-spacing: -2.8px; line-height: 1.11; font-size: clamp(39px,5.5vw,60px); margin: 0; color: #1c2823; }
+h1 { font-family: "Manrope",sans-serif; font-weight: 800; letter-spacing: -2.8px; line-height: 1.11; font-size: clamp(34px,3.6vw,48px); margin: 0; color: #1c2823; }
 h1 span { color: #247454; }
 .hero-description { margin: 17px auto 0; max-width: 525px; color: #707c74; line-height: 1.75; font-size: 15px; }
 
@@ -132,7 +132,7 @@ h1 span { color: #247454; }
   .beta-label { display: none; }
   .main-content { padding: 56px 18px 36px; }
   .hero-copy { margin-bottom: 27px; }
-  h1 { font-size: clamp(36px,10vw,49px); letter-spacing: -2px; }
+  h1 { font-size: clamp(33px,8.8vw,42px); letter-spacing: -1.7px; }
   .eyebrow { font-size: 8px; letter-spacing: 1.4px; }
   .hero-description { font-size: 13px; line-height: 1.7; max-width: 390px; margin-top: 14px; }
   .upload-card { min-height: 325px; padding: 22px 18px; border-radius: 18px; }
