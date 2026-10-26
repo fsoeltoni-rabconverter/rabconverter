@@ -3,9 +3,9 @@
   "pages": 1,
   "billable_pages": [1],
   "rows": [
-    {"page": 1, "kind": "item", "description": "PEKERJAAN TANAH DAN PEMADATAN termasuk pengangkutan material ke lokasi", "unit": "m2", "quantity": 125, "unit_price": 12500, "printed_amount": 1562500, "formula_candidate": "=D2*E2", "warning": null},
-    {"page": 1, "kind": "item", "description": "PASANG BATU BATA DINDING", "unit": "m2", "quantity": 85.5, "unit_price": 95000, "printed_amount": 8122500, "formula_candidate": "=D3*E3", "warning": null},
-    {"page": 1, "kind": "subtotal", "description": "SUBTOTAL", "unit": null, "quantity": null, "unit_price": null, "printed_amount": 9685000, "formula_candidate": "=SUM(F2:F3)", "warning": null}
+    {"page": 1, "kind": "item", "description": "PEKERJAAN TANAH DAN PEMADATAN termasuk pengangkutan material ke lokasi", "unit": "m2", "quantity": 125, "unit_price": 12500, "printed_amount": 1562500, "formula_candidate": "quantity * unit_price", "warning": null},
+    {"page": 1, "kind": "item", "description": "PASANG BATU BATA DINDING", "unit": "m2", "quantity": 85.5, "unit_price": 95000, "printed_amount": 8122500, "formula_candidate": "quantity * unit_price", "warning": null},
+    {"page": 1, "kind": "subtotal", "description": "SUBTOTAL", "unit": null, "quantity": null, "unit_price": null, "printed_amount": 9685000, "formula_candidate": "sum of retained item amounts in section", "warning": null}
   ],
   "expected_reconciliation": {"sum_item_amounts": 9685000, "printed_subtotal": 9685000, "match": true}
 }
