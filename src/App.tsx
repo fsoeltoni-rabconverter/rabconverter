@@ -83,8 +83,7 @@ export default function App() {
           <div className="eyebrow"><span className="eyebrow-line" /> PDF RAB MENJADI EXCEL</div>
           <h1>RAB PDF ke Excel.<br /><span>Tanpa Ketik Ulang.</span></h1>
           <p className="hero-description">
-            Ubah tabel RAB atau BoQ dari PDF menjadi file Excel yang bisa diedit.
-            Kurangi pekerjaan salin-tempel uraian pekerjaan, volume, satuan, dan harga satuan secara manual.
+            Ubah tabel RAB atau BoQ PDF menjadi Excel yang bisa diedit.
           </p>
         </div>
 
@@ -135,79 +134,12 @@ export default function App() {
           {message && <p className="error-message" role="alert">{message}</p>}
         </section>
 
-        <div className="reassurance-row">
-          <div className="reassurance-item"><span className="reassurance-icon">↗</span><span>Excel bisa diedit</span></div>
+        <div className="reassurance-row" aria-label="Ringkasan fitur">
+          <div className="reassurance-item"><span className="reassurance-check">✓</span><span>PDF RAB / BoQ</span></div>
           <span className="reassurance-separator" />
-          <div className="reassurance-item"><span className="reassurance-check">✓</span><span>Kurangi input manual</span></div>
-          <span className="reassurance-separator" />
-          <div className="reassurance-item"><span className="reassurance-check">✓</span><span>Periksa hasil sebelum dipakai</span></div>
+          <div className="reassurance-item"><span className="reassurance-check">✓</span><span>File Excel editable</span></div>
         </div>
 
-        <section className="seo-content" aria-label="Panduan RAB PDF ke Excel">
-          <nav className="content-nav" aria-label="Navigasi panduan">
-            <a href="#tentang-rabconverter">Tentang RabConverter</a>
-            <a href="#siapkan-pdf">Menyiapkan PDF</a>
-            <a href="#periksa-hasil">Pemeriksaan hasil</a>
-            <a href="#faq">FAQ</a>
-          </nav>
-
-          <section className="content-block" id="tentang-rabconverter">
-            <p className="content-eyebrow">UNTUK PEKERJAAN KONSTRUKSI</p>
-            <h2>Ubah tabel RAB PDF ke Excel tanpa mengetik ulang setiap baris</h2>
-            <p>RAB atau Bill of Quantities (BoQ) sering dibagikan sebagai PDF, sementara uraian pekerjaan, volume, satuan, harga satuan, dan jumlahnya perlu diolah lagi di spreadsheet. Memindahkan tabel baris demi baris secara manual dapat menyita waktu dan membuka peluang salah ketik.</p>
-            <p>RabConverter dirancang untuk membantu alur kerja dari dokumen RAB/BoQ PDF menuju spreadsheet yang bisa diperiksa dan diedit. Alat ini bukan pembuat RAB dari gambar kerja, bukan penyedia harga material atau AHSP, dan tidak menggantikan pemeriksaan estimator.</p>
-            <ul className="content-list">
-              <li><strong>Uraian pekerjaan:</strong> pastikan deskripsi dan kode item tidak tertukar antarbaris.</li>
-              <li><strong>Volume dan satuan:</strong> periksa tanda desimal, satuan, serta angka yang terpotong di pergantian halaman.</li>
-              <li><strong>Harga dan jumlah:</strong> cocokkan subtotal dan total dengan dokumen sumber sebelum memakai hasil untuk penawaran atau pekerjaan proyek.</li>
-            </ul>
-          </section>
-
-          <section className="content-block" id="siapkan-pdf">
-            <p className="content-eyebrow">PANDUAN PRAKTIS</p>
-            <h2>Yang perlu disiapkan sebelum mengubah RAB PDF ke Excel</h2>
-            <h3>1. Kenali jenis PDF yang digunakan</h3>
-            <p>PDF yang teksnya bisa dipilih biasanya lebih mudah diekstrak menjadi tabel daripada PDF hasil pindai yang berisi gambar halaman. Dokumen hasil pindai umumnya membutuhkan OCR (pengenalan karakter optik); jangan menganggap hasil OCR akan selalu benar, terutama untuk angka, simbol satuan, dan tanda desimal.</p>
-            <h3>2. Perhatikan struktur tabel dan pergantian halaman</h3>
-            <p>RAB dapat memiliki baris judul bagian, sub-total, catatan, atau kolom yang menyambung ke halaman berikutnya. Jangan memeriksa hanya jumlah total: pastikan tiap item masih berada di kolom dan bagian pekerjaan yang tepat.</p>
-            <h3>3. Simpan PDF sumber untuk pembanding</h3>
-            <p>Gunakan PDF asli sebagai referensi saat mengecek uraian, volume, satuan, harga satuan, subtotal, pajak, dan grand total. Jika ada nilai yang tidak terbaca atau tidak cocok, periksa dokumen sumber alih-alih menebak angka.</p>
-          </section>
-
-          <section className="content-block" id="periksa-hasil">
-            <p className="content-eyebrow">CHECKLIST ESTIMATOR</p>
-            <h2>Periksa Excel hasil konversi sebelum dipakai</h2>
-            <p>Spreadsheet yang dapat diedit belum tentu identik dengan dokumen sumber. Luangkan waktu untuk memeriksa kembali:</p>
-            <ul className="content-list">
-              <li>Jumlah item dan urutannya sesuai dokumen PDF.</li>
-              <li>Angka volume, satuan, harga satuan, dan jumlah berada di kolom yang benar.</li>
-              <li>Angka desimal, pemisah ribuan, tanda minus, dan angka nol tidak berubah.</li>
-              <li>Baris subtotal, rekapitulasi, pajak, serta total akhir dapat ditelusuri ke PDF sumber.</li>
-              <li>Setiap formula yang dibutuhkan sudah diuji; jangan berasumsi formula asli PDF otomatis dipulihkan.</li>
-            </ul>
-          </section>
-
-          <section className="content-block faq-block" id="faq">
-            <p className="content-eyebrow">PERTANYAAN UMUM</p>
-            <h2>Pertanyaan tentang RAB PDF ke Excel</h2>
-            <details>
-              <summary>Apakah RabConverter sudah bisa menghasilkan file Excel?</summary>
-              <p>Belum pada versi preview ini. Halaman saat ini baru mendemonstrasikan pemilihan file; pemrosesan PDF dan pembuatan XLSX belum diaktifkan. File yang dipilih tidak dikirim ke server.</p>
-            </details>
-            <details>
-              <summary>Apakah PDF hasil scan atau foto dokumen bisa dikonversi?</summary>
-              <p>Dukungan PDF hasil scan dan OCR belum tersedia untuk diverifikasi di versi preview ini. Kemampuan tersebut tidak dijanjikan sampai fungsi konversinya diuji dan diaktifkan.</p>
-            </details>
-            <details>
-              <summary>Apakah RabConverter membuat RAB baru atau menentukan harga AHSP?</summary>
-              <p>Tidak. Fokus produk adalah membantu pemindahan tabel RAB/BoQ yang sudah ada dari PDF ke spreadsheet. Penyusunan lingkup pekerjaan, perhitungan volume dari gambar kerja, dan penentuan harga satuan adalah pekerjaan yang berbeda.</p>
-            </details>
-            <details>
-              <summary>Mengapa hasil konversi tetap harus diperiksa?</summary>
-              <p>Tata letak PDF bervariasi dan tabel dapat terpotong, berpindah halaman, atau memakai format angka yang berbeda. Pengecekan terhadap dokumen sumber penting sebelum spreadsheet digunakan untuk pekerjaan atau penawaran.</p>
-            </details>
-          </section>
-        </section>
       </main>
 
       <footer className="footer">
