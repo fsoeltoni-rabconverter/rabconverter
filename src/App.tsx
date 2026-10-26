@@ -97,7 +97,7 @@ export default function App() {
           aria-label="Area upload PDF RAB"
         >
           {!selectedFile ? (
-            <>
+            <div className="empty-state">
               <div className="upload-illustration">
                 <div className="orbit orbit-one" />
                 <div className="orbit orbit-two" />
@@ -111,7 +111,7 @@ export default function App() {
                 <span>Pilih PDF RAB</span><ArrowIcon />
               </button>
               <p className="file-limit">PDF saja · Maks. 30 MB</p>
-            </>
+            </div>
           ) : (
             <div className="selected-state">
               <div className="selected-file-icon"><FileIcon /></div>

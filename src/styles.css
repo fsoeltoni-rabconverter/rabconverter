@@ -70,6 +70,16 @@ h1 span { color: #247454; }
   display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 27px 30px 25px;
   position: relative; transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
 }
+.empty-state {
+  width: min(100%, 440px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.empty-state h2 { width: 100%; text-align: center; }
+.empty-state .upload-hint { width: 100%; text-align: center; }
+.empty-state .primary-button { width: 100%; }
+
 .upload-card.is-dragging { border-color: #3a9567; box-shadow: 0 0 0 4px rgba(58,149,103,.12), 0 20px 55px rgba(43,68,50,.08); transform: translateY(-2px); background: #fbfffb; }
 .upload-card h2 { width: min(100%, 440px); text-align: center; font-family: "Manrope",sans-serif; font-size: 18px; letter-spacing: -.4px; font-weight: 800; margin: 15px 0 5px; }
 .upload-hint { color: #849087; margin: 0 0 22px; font-size: 13px; }
