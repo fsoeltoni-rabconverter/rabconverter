@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://rabconverter-preview.rabconverter-id.workers.dev/sitemap.xml
