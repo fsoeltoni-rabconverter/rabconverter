@@ -1,7 +1,7 @@
 # RabConverter Implementation Tracker
 
 Last reviewed: 2026-10-26  
-Overall status: **Planning recorded; implementation work not yet verified.**  
+Overall status: **P0 partially complete; implementation work is still not verified beyond the documented fixture/gate work.**  
 Source of detail: the linked GitHub Issues. This file is the project-level snapshot, not a claim that a task is complete.
 
 ## Status definitions
@@ -22,7 +22,8 @@ Update this file when a work package changes state, its dependency changes, or i
 | Repository application code | Not verified / baseline documentation-only | No application tree was verified in the 2026-10-25 repository review. |
 | CI and preview deployment | Not verified | Must be demonstrated with a clean checkout, successful CI, a real preview URL, and commit SHA. |
 | Supabase implementation | Not verified | Prior baseline said no tables existed in the inspected public schema. Recheck before implementation/migrations. |
-| Reducto account/privacy/cost gate | Not started | No real customer document may be sent until the account-specific gate is approved. |
+| Golden PDF fixture corpus | Done | Four synthetic PDFs, four expected-output oracles, fixture README, and benchmark protocol added; PDFs validated locally with `pdfinfo`. Issue #4 closed as completed. |
+| Reducto account/privacy/cost gate | Blocked | Public evidence researched; account-specific plan, retention, residency, DPA/contract, data-use and API/webhook settings still require verification. No customer PDFs may be sent. |
 | XLSX calculation engine and worker placement | Not started | Cloudflare Worker vs container must be selected through benchmark evidence. |
 | Wallet, billing, and payment | Not started | Payment vendor remains unselected; QRIS is the preferred method to evaluate. |
 
@@ -30,8 +31,8 @@ Update this file when a work package changes state, its dependency changes, or i
 
 | ID | Phase | Work package | State | Issue | Dependencies / exit evidence |
 |---|---|---|---|---|---|
-| RC-01 | P0 | Legal golden PDFs and benchmark protocol | Not started | [#4](https://github.com/fsoeltoni-rabconverter/rabconverter/issues/4) | Versioned fixtures, source permission, expected extraction/formula/provenance/billability, reproducible benchmark. |
-| RC-02 | P0 | Reducto account, privacy, usage and cost gate | Not started | [#5](https://github.com/fsoeltoni-rabconverter/rabconverter/issues/5) | Explicit go/no-go backed by account-specific terms and privacy review. |
+| RC-01 | P0 | Legal golden PDFs and benchmark protocol | **Done** | [#4](https://github.com/fsoeltoni-rabconverter/rabconverter/issues/4) | Synthetic repository-owned fixtures, versioned expected results, hashes, deterministic benchmark protocol, no customer documents. |
+| RC-02 | P0 | Reducto account, privacy, usage and cost gate | **Blocked** | [#5](https://github.com/fsoeltoni-rabconverter/rabconverter/issues/5) | Public gate evidence recorded; account-specific terms/settings and an authorized account test remain required for Go. |
 | RC-03 | P1 | App skeleton, deterministic CI and Cloudflare preview | Not started | [#6](https://github.com/fsoeltoni-rabconverter/rabconverter/issues/6) | Clean install/lint/typecheck/test/build, PR CI, verifiable preview URL + commit SHA. |
 | RC-04 | P1 | XLSX engine and conversion-worker benchmark | Not started | [#7](https://github.com/fsoeltoni-rabconverter/rabconverter/issues/7) | Measured runtime/CPU/memory/size/failure behavior; evidence-based Worker-only vs container choice; queue decision. |
 | RC-05 | P2 | Supabase auth, owner-scoped jobs, private files | Not started | [#8](https://github.com/fsoeltoni-rabconverter/rabconverter/issues/8) | Reviewed migrations, RLS/least privilege, idempotent jobs, private storage and cross-user tests. |
@@ -47,12 +48,12 @@ Update this file when a work package changes state, its dependency changes, or i
 1. **Application baseline is absent or unverified.** Build the smallest runnable app and CI before implementing the full pipeline.
 2. **Worker placement is not locked.** Benchmark first. Cloudflare stays the preferred web/API entry point; the conversion stage can move behind the worker contract to a container if calculation engine, memory, or runtime requirements justify it.
 3. **Queue is not selected.** Start without one; if one is justified, require database commit before dispatch, recovery for undispatched jobs, at-least-once/idempotent consumer behavior, and no second source of truth.
-4. **Reducto gate is open.** Verify account-specific terms, privacy, usage semantics, cost, and status/retry behavior before sending customer documents.
+4. **Reducto gate is blocked on account-specific evidence.** Public docs are insufficient to approve real customer documents. Verify the actual plan, retention, residency, DPA/contract, data-use terms, API keys, webhook signing and usage reconciliation.
 5. **Payment vendor is not selected.** Evaluate QRIS and settlement/webhook/refund behavior before implementation.
 
 ## Next actions
 
-- Start RC-01 and RC-02 in parallel.
-- Create the minimal runnable foundation through RC-03; then use permitted golden fixtures to complete the RC-04 runtime/XLSX benchmark.
+- Resolve the account-specific Reducto gate in RC-02 when account access/evidence is available.
+- Build the minimal runnable foundation through RC-03; then use the new permitted golden fixtures to complete the RC-04 runtime/XLSX benchmark.
 - Do not declare a phase complete without links to the tests, benchmark, PR, decision record, or preview that prove its exit criteria.
 - Keep the core job lifecycle singular: explicit conversion request → reserve → extract → normalize/reconstruct → build/recalculate/verify XLSX → page assessment → settle/release → authorized download.
