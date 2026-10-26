@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent, type DragEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from "react";
 
 const MAX_FILE_SIZE_BYTES = 30 * 1024 * 1024;
 
@@ -30,6 +30,20 @@ export default function App() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
   const [message, setMessage] = useState("");
+  const pickerOpenRef = useRef(false);
+
+  useEffect(() => {
+    const input = inputRef.current;
+    if (!input) return;
+
+    const handleCancel = () => {
+      // Native file-picker cancellation should only release the open guard.
+      pickerOpenRef.current = false;
+    };
+
+    input.addEventListener("cancel", handleCancel);
+    return () => input.removeEventListener("cancel", handleCancel);
+  }, []);
 
   function validateAndSetFile(file?: File) {
     setMessage("");
@@ -54,10 +68,22 @@ export default function App() {
     setSelectedFile(file);
   }
 
+  function openFilePicker() {
+    const input = inputRef.current;
+    if (!input || pickerOpenRef.current) return;
+
+    // Guard against duplicate click events opening the native dialog twice.
+    pickerOpenRef.current = true;
+    input.click();
+  }
+
   function handleInputChange(event: ChangeEvent<HTMLInputElement>) {
+    pickerOpenRef.current = false;
     validateAndSetFile(event.target.files?.[0]);
+    // Allow the same PDF to be picked again after removing or replacing it.
     event.target.value = "";
   }
+
 
   function handleDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
@@ -69,7 +95,7 @@ export default function App() {
     <div className="app-shell">
       <header className="topbar">
         <a className="brand" href="/" aria-label="RabConverter beranda">
-          <span className="brand-mark">R<span>.</span></span>
+          <span className="brand-mark" aria-hidden="true"><span className="brand-letter">R</span><span className="brand-dot">.</span></span>
           <span className="brand-name">rabconverter</span>
         </a>
         <div className="topbar-right">
@@ -106,7 +132,7 @@ export default function App() {
               </div>
               <h2>Mulai dari PDF RAB atau BoQ kamu</h2>
               <p className="upload-hint">Tarik file ke sini, atau pilih PDF RAB/BoQ dari perangkat.</p>
-              <button className="primary-button" type="button" onClick={() => inputRef.current?.click()}>
+              <button className="primary-button" type="button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); openFilePicker(); }}>
                 <span>Pilih PDF RAB</span><ArrowIcon />
               </button>
               <p className="file-limit">PDF saja · Maks. 30 MB</p>
