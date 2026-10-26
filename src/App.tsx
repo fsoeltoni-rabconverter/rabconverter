@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from "react";
-
-const MAX_FILE_SIZE_BYTES = 30 * 1024 * 1024;
+import { validatePdfFile } from "./lib/preflight.js";
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
@@ -31,6 +30,7 @@ export default function App() {
   const [dragging, setDragging] = useState(false);
   const [message, setMessage] = useState("");
   const pickerOpenRef = useRef(false);
+  const validationRunRef = useRef(0);
 
   useEffect(() => {
     const input = inputRef.current;
@@ -45,23 +45,17 @@ export default function App() {
     return () => input.removeEventListener("cancel", handleCancel);
   }, []);
 
-  function validateAndSetFile(file?: File) {
+  async function validateAndSetFile(file?: File) {
+    const validationRun = ++validationRunRef.current;
     setMessage("");
     if (!file) return;
 
-    if (!file.name.toLowerCase().endsWith(".pdf") && file.type !== "application/pdf") {
+    const validation = await validatePdfFile(file);
+    if (validationRun !== validationRunRef.current) return;
+
+    if (!validation.ok) {
       setSelectedFile(null);
-      setMessage("Pilih dokumen dengan format PDF.");
-      return;
-    }
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-      setSelectedFile(null);
-      setMessage("Ukuran file maksimum untuk langkah awal ini adalah 30 MB.");
-      return;
-    }
-    if (file.size === 0) {
-      setSelectedFile(null);
-      setMessage("File kosong. Coba pilih PDF yang lain.");
+      setMessage(validation.message);
       return;
     }
 
@@ -135,7 +129,7 @@ export default function App() {
               <button className="primary-button" type="button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); openFilePicker(); }}>
                 <span>Pilih PDF RAB</span><ArrowIcon />
               </button>
-              <p className="file-limit">PDF saja · Maks. 30 MB</p>
+              <p className="file-limit">PDF saja · Maks. 30 MiB</p>
             </div>
           ) : (
             <div className="selected-state">

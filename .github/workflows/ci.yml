@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   verify:
-    name: Typecheck and production build
+    name: Preflight tests, typecheck and production build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source
@@ -26,6 +26,8 @@ jobs:
           node-version-file: .node-version
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Preflight tests
+        run: npm run test:preflight
       - name: Typecheck
         run: npm run typecheck
       - name: Build
