@@ -277,7 +277,7 @@ function cellsFromOcrWords(words,fallbackText){
   if(!positioned.length)return String(fallbackText||'').split(/\r?\n/).map(line=>line.trim()).filter(Boolean).map(line=>[line]);
   positioned.sort((a,b)=>(a.y0+a.y1)/2-(b.y0+b.y1)/2||a.x0-b.x0);const lines=[];
   for(const word of positioned){const center=(word.y0+word.y1)/2,height=Math.max(1,word.y1-word.y0),current=lines[lines.length-1];if(!current||Math.abs(center-current.center)>Math.max(5,Math.min(16,height*.55)))lines.push({center,height,words:[word]});else{const count=current.words.length;current.center=(current.center*count+center)/(count+1);current.height=(current.height*count+height)/(count+1);current.words.push(word)}}
-  return lines.map(line=>{line.words.sort((a,b)=>a.x0-b.x0);const cells=[];let cell='',lastRight=0;for(const word of line.words){if(cell&&word.x0-lastRight>Math.max(8,line.height*.45)){cells.push(cell.trim());cell=''}cell+=(cell?' ':'')+word.text;lastRight=Math.max(lastRight,word.x1)}if(cell.trim())cells.push(cell.trim());return cells}).filter(row=>row.length);
+  return lines.map(line=>{line.words.sort((a,b)=>a.x0-b.x0);const cells=[];let cell='',lastRight=0;for(const word of line.words){if(cell&&word.x0-lastRight>Math.max(6,line.height*.3)){cells.push(cell.trim());cell=''}cell+=(cell?' ':'')+word.text;lastRight=Math.max(lastRight,word.x1)}if(cell.trim())cells.push(cell.trim());return cells}).filter(row=>row.length);
 }
 function parseNumber(value){
   let text=String(value||'').trim().replace(/^(?:rp|idr)\s*/i,'').replace(/\s/g,'');const negative=text.startsWith('(')&&text.endsWith(')');text=text.replace(/[()]/g,'');if(!/^[+-]?\d+(?:[.,]\d+)*$/.test(text))return null;
