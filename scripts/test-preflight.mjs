@@ -5,6 +5,7 @@ import {
   MAX_FILE_SIZE_BYTES,
   MAX_PDF_PAGES,
   classifyRabDocument,
+  summarizeRabPageClassifications,
   validatePdfFile,
 } from "../src/lib/preflight.js";
 
@@ -78,4 +79,63 @@ test("does not automatically accept a RAB title without cost-structure evidence"
 test("classifies unrelated text with no RAB evidence as not RAB", () => {
   const result = classifyRabDocument("Laporan rapat mingguan. Daftar peserta dan agenda rapat.");
   assert.equal(result.status, "NOT_RAB");
+});
+
+test("does not label a partial low-signal batch as NOT_RAB before remaining pages are read", () => {
+  const result = summarizeRabPageClassifications([{
+    pageNumber: 1,
+    textChars: 20,
+    textFound: true,
+    truncated: false,
+    classification: classifyRabDocument("Laporan rapat mingguan dan agenda."),
+  }], { complete: false });
+  assert.equal(result.status, "NEEDS_MORE_PAGES");
+});
+
+test("flags textless pages for OCR without hiding RAB evidence on other pages", () => {
+  const rabText = [
+    "RENCANA ANGGARAN BIAYA",
+    "Uraian Pekerjaan | Volume | Satuan | Harga Satuan | Jumlah Harga",
+    "Pekerjaan beton | 10 | m3 | 500000 | 5000000",
+    "Pekerjaan pasir | 2 | m3 | 300000 | 600000",
+  ].join("\\n");
+  const result = summarizeRabPageClassifications([
+    {
+      pageNumber: 1,
+      textChars: rabText.length,
+      textFound: true,
+      truncated: false,
+      classification: classifyRabDocument(rabText),
+    },
+    {
+      pageNumber: 2,
+      textChars: 0,
+      textFound: false,
+      truncated: false,
+      classification: classifyRabDocument(""),
+    },
+  ], { complete: true });
+  assert.equal(result.status, "LIKELY_RAB");
+  assert.deepEqual(result.pagesNeedingOcr, [2]);
+});
+
+test("reports NEEDS_OCR when every reviewed page has no text after extraction", () => {
+  const result = summarizeRabPageClassifications([
+    {
+      pageNumber: 1,
+      textChars: 0,
+      textFound: false,
+      truncated: false,
+      classification: classifyRabDocument(""),
+    },
+    {
+      pageNumber: 2,
+      textChars: 0,
+      textFound: false,
+      truncated: false,
+      classification: classifyRabDocument(""),
+    },
+  ], { complete: true });
+  assert.equal(result.status, "NEEDS_OCR");
+  assert.deepEqual(result.pagesNeedingOcr, [1, 2]);
 });
