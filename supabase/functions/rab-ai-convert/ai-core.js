@@ -79,11 +79,12 @@ export function normalizeAiBatch(output, { startPage, pageCount }) {
     }
 
     let localPage = Number(inputRow.batchPageIndex);
-    if (!Number.isInteger(localPage) || localPage < 1 || localPage > pageCount) {
-      localPage = 1;
-    }
-    const rowType = AI_ROW_TYPES.includes(inputRow.rowType) ? inputRow.rowType : "unknown";
-    const confidence = CONFIDENCE.has(inputRow.confidence) ? inputRow.confidence : "low";
+    const invalidPageIndex = !Number.isInteger(localPage) || localPage < 1 || localPage > pageCount;
+    if (invalidPageIndex) localPage = 1;
+    const invalidRowType = !AI_ROW_TYPES.includes(inputRow.rowType);
+    const rowType = invalidRowType ? "unknown" : inputRow.rowType;
+    const invalidConfidence = !CONFIDENCE.has(inputRow.confidence);
+    const confidence = invalidConfidence ? "low" : inputRow.confidence;
 
     const item = {
       rowIndex: index + 1,
@@ -98,10 +99,13 @@ export function normalizeAiBatch(output, { startPage, pageCount }) {
       amountText: cleanText(inputRow.amountText, 100),
       rawLine: cleanText(inputRow.rawLine, 4000),
       confidence,
-      needsReview: Boolean(inputRow.needsReview) || confidence === "low",
+      needsReview: Boolean(inputRow.needsReview) || confidence === "low" || invalidPageIndex || invalidRowType || invalidConfidence,
       reviewReason: cleanText(inputRow.reviewReason, 1200),
     };
 
+    if (invalidPageIndex) item.reviewReason = appendReason(item.reviewReason, "Nomor halaman dari AI tidak valid; perlu verifikasi manual.");
+    if (invalidRowType) item.reviewReason = appendReason(item.reviewReason, "Tipe baris AI tidak dikenali.");
+    if (invalidConfidence) item.reviewReason = appendReason(item.reviewReason, "Keyakinan AI tidak valid; diturunkan ke low.");
     item.quantityValue = parseLocalizedNumber(item.quantityText);
     item.unitPriceValue = parseLocalizedNumber(item.unitPriceText);
     item.amountValue = parseLocalizedNumber(item.amountText);
