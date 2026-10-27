@@ -22,13 +22,75 @@ export type LocalOcrProgress = {
 export type LocalOcrPageResult = {
   pageNumber: number;
   text: string;
+  /** Best-effort OCR rows, grouped by vertical line and horizontal cell gaps. */
+  rows: string[][];
   truncated: boolean;
 };
 
 type LocalOcrOptions = {
   signal?: AbortSignal;
   onProgress?: (progress: LocalOcrProgress) => void;
+  /** Defaults to five pages for the explicit OCR button. Conversion may set a higher, bounded cap. */
+  maxPages?: number;
 };
+
+type OcrWord = {
+  text?: string;
+  bbox?: { x0?: number; y0?: number; x1?: number; y1?: number };
+};
+
+function rowsFromOcrWords(words: OcrWord[], fallbackText: string): string[][] {
+  const positioned = words
+    .filter((word) => typeof word.text === "string" && word.text.trim() && word.bbox)
+    .map((word) => ({
+      text: String(word.text).trim(),
+      x0: Number(word.bbox?.x0 ?? 0),
+      y0: Number(word.bbox?.y0 ?? 0),
+      x1: Number(word.bbox?.x1 ?? 0),
+      y1: Number(word.bbox?.y1 ?? 0),
+    }))
+    .filter((word) => Number.isFinite(word.x0) && Number.isFinite(word.y0) && word.x1 >= word.x0);
+
+  if (positioned.length === 0) {
+    return fallbackText.split(/\\r?\\n/).map((line) => line.trim()).filter(Boolean).map((line) => [line]);
+  }
+
+  positioned.sort((left, right) => (left.y0 + left.y1) / 2 - (right.y0 + right.y1) / 2 || left.x0 - right.x0);
+  const lines: Array<{ centerY: number; height: number; words: typeof positioned }> = [];
+
+  for (const word of positioned) {
+    const centerY = (word.y0 + word.y1) / 2;
+    const height = Math.max(1, word.y1 - word.y0);
+    const current = lines.at(-1);
+    if (!current || Math.abs(centerY - current.centerY) > Math.max(5, Math.min(16, height * 0.55))) {
+      lines.push({ centerY, height, words: [word] });
+    } else {
+      const count = current.words.length;
+      current.centerY = (current.centerY * count + centerY) / (count + 1);
+      current.height = (current.height * count + height) / (count + 1);
+      current.words.push(word);
+    }
+  }
+
+  return lines.map((line) => {
+    line.words.sort((left, right) => left.x0 - right.x0);
+    const cells: string[] = [];
+    let currentCell = "";
+    let lastRight = 0;
+    for (const word of line.words) {
+      const gap = word.x0 - lastRight;
+      const threshold = Math.max(18, line.height * 1.45);
+      if (currentCell && gap > threshold) {
+        cells.push(currentCell.trim());
+        currentCell = "";
+      }
+      currentCell += (currentCell ? " " : "") + word.text;
+      lastRight = Math.max(lastRight, word.x1);
+    }
+    if (currentCell.trim()) cells.push(currentCell.trim());
+    return cells;
+  }).filter((row) => row.some(Boolean));
+}
 
 /**
  * OCR only the requested scan-only pages in the browser. PDF bytes and OCR
@@ -44,8 +106,9 @@ export async function ocrPdfPages(
     .sort((left, right) => left - right);
 
   if (pageNumbers.length === 0) return [];
-  if (pageNumbers.length > MAX_OCR_PAGES_PER_RUN) {
-    throw new Error(`OCR dibatasi maksimal ${MAX_OCR_PAGES_PER_RUN} halaman per proses.`);
+  const maxPages = Math.max(1, Math.min(options.maxPages ?? MAX_OCR_PAGES_PER_RUN, 200));
+  if (pageNumbers.length > maxPages) {
+    throw new Error(`OCR dibatasi maksimal ${maxPages} halaman per proses.`);
   }
 
   const signal = options.signal;
@@ -153,9 +216,12 @@ export async function ocrPdfPages(
         const recognized = await worker.recognize(canvas);
         assertNotAborted();
         const recognizedText = String(recognized.data.text ?? "").trim();
+        const boundedText = recognizedText.slice(0, MAX_OCR_TEXT_CHARS);
+        const recognizedData = recognized.data as unknown as { words?: OcrWord[] };
         results.push({
           pageNumber,
-          text: recognizedText.slice(0, MAX_OCR_TEXT_CHARS),
+          text: boundedText,
+          rows: rowsFromOcrWords(recognizedData.words ?? [], boundedText),
           truncated: recognizedText.length > MAX_OCR_TEXT_CHARS,
         });
       } finally {
