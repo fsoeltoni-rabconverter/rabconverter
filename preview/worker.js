@@ -290,7 +290,7 @@ function parseNumber(value){
 function norm(value){return String(value||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim()}
 function headerMap(cells){
   const map={};cells.forEach((cell,index)=>{const v=norm(cell);if(/^(no|nomor|no urut|item)$/.test(v))map.no=index;else if(/uraian|deskripsi|description|jenis pekerjaan|nama pekerjaan/.test(v))map.desc=index;else if(/^(volume|qty|quantity|kuantitas)$/.test(v))map.volume=index;else if(/^(satuan|unit|uom)$/.test(v))map.unit=index;else if(/harga satuan|unit price|tarif satuan/.test(v))map.price=index;else if(/jumlah harga|total harga|amount|total biaya|jumlah biaya/.test(v))map.amount=index});
-  return Object.keys(map).filter(key=>key!=='no').length>=2?map:null;
+  return new Set(Object.entries(map).filter(([key])=>key!=='no').map(([,index])=>index)).size>=2?map:null;
 }
 
 function inferRABRow(cells,itemIndex){
