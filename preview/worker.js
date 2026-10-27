@@ -246,6 +246,135 @@ function classifyLocalText(extractedText,ocrAttempted){
   return {status:'NOT_RAB',score,signals,reasons:['insufficient_rab_boq_evidence']};
 }
 
+async function runPreflight(){
+  if(!selectedFile||busy||ocrBusy)return;
+  const restarting=lastPreflightResult&&lastPreflightResult.nextStartPage===null;
+  const startPage=restarting?1:nextStartPage;
+  if(restarting){pageReports=[];lastPreflightResult=null;nextStartPage=1;ocrNotice='';localOcr.hidden=true}
+  busy=true;
+  const id=++requestId;
+  const controller=new AbortController();
+  activeController=controller;
+  preflight.disabled=true;
+  setPreflightLabel('Membaca teks…');
+  updateNote('Mengekstrak teks PDF secara bertahap. OCR dan render gambar tidak dijalankan.');
+  help.textContent='Maksimal 5 halaman per permintaan. PDF tidak disimpan permanen.';
+  err.hidden=true;
+  try{
+    const response=await fetch(PREFLIGHT_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/pdf','x-preflight-start-page':String(startPage)},
+      body:selectedFile,
+      signal:controller.signal
+    });
+    const payload=await response.json().catch(()=>null);
+    if(id!==requestId)return;
+    if(!response.ok||!payload||payload.ok!==true||typeof payload.pageCount!=='number'||!Array.isArray(payload.pageResults)||!(payload.nextStartPage===null||typeof payload.nextStartPage==='number')){
+      showError(payload?.message||'Pemeriksaan PDF gagal. Coba lagi nanti.');
+      return;
+    }
+    const reports=new Map(pageReports.map(page=>[page.pageNumber,page]));
+    for(const page of payload.pageResults)reports.set(page.pageNumber,page);
+    pageReports=[...reports.values()].sort((a,b)=>a.pageNumber-b.pageNumber);
+    lastPreflightResult=payload;
+    nextStartPage=payload.nextStartPage??1;
+    const complete=payload.nextStartPage===null&&pageReports.length===payload.pageCount;
+    renderSummary(payload.pageCount);
+    setPreflightLabel(payload.nextStartPage===null?'Ulangi Pemeriksaan':'Periksa Halaman Berikutnya');
+  }catch(error){
+    if(id!==requestId||(error&&error.name==='AbortError'))return;
+    showError('Tidak dapat menghubungi pemeriksaan server. Periksa koneksi lalu coba lagi.');
+  }finally{
+    if(id===requestId){
+      busy=false;
+      activeController=null;
+      preflight.disabled=false;
+      if(!lastPreflightResult)setPreflightLabel('Periksa PDF');
+      else if(lastPreflightResult.nextStartPage===null)setPreflightLabel('Ulangi Pemeriksaan');
+      else setPreflightLabel('Periksa Halaman Berikutnya');
+    }
+  }
+}
+async function runLocalOcr(){
+  if(!selectedFile||busy||ocrBusy)return;
+  const summary=summarizePageReports(pageReports,Boolean(lastPreflightResult&&lastPreflightResult.nextStartPage===null&&pageReports.length===lastPreflightResult.pageCount));
+  const targets=summary.pagesNeedingOcr.slice(0,5);
+  if(!targets.length)return;
+  ocrBusy=true;
+  const id=++requestId;
+  const controller=new AbortController();
+  ocrAbortController=controller;
+  let ocrWorker=null,workerTerminated=false,pdfTask=null;
+  const terminateWorker=async()=>{if(ocrWorker&&!workerTerminated){workerTerminated=true;await ocrWorker.terminate()}};
+  const abortWorker=()=>{void terminateWorker().catch(()=>undefined)};
+  controller.signal.addEventListener('abort',abortWorker,{once:true});
+  const throwIfAborted=()=>{if(controller.signal.aborted)throw new DOMException('OCR dibatalkan.','AbortError')};
+  const setProgress=(text)=>{ocrProgress.hidden=false;ocrProgress.textContent=text};
+  preflight.disabled=true;localOcr.disabled=true;
+  setProgress('Membuka PDF dan menyiapkan OCR lokal…');
+  err.hidden=true;
+  try{
+    const pdfjs=await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/build/pdf.mjs');
+    pdfjs.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/build/pdf.worker.mjs';
+    throwIfAborted();
+    pdfTask=pdfjs.getDocument({data:new Uint8Array(await selectedFile.arrayBuffer()),isEvalSupported:false,useWorkerFetch:false});
+    const pdf=await pdfTask.promise;
+    if(pdf.numPages<1||pdf.numPages>200||targets.some(page=>page>pdf.numPages))throw new Error('Jumlah halaman PDF tidak sesuai batas pemeriksaan.');
+    setProgress('Mengunduh mesin OCR dan model bahasa Indonesia + Inggris…');
+    const tess=await import('https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/+esm');
+    ocrWorker=await tess.createWorker('ind+eng',1,{workerPath:'https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/worker.min.js',logger:(event)=>{
+      if(id!==requestId||controller.signal.aborted)return;
+      const current=event.progress&&event.progress<1?' '+Math.round(event.progress*100)+'%':'';
+      const status=String(event.status||'');
+      if(status.toLowerCase().includes('recogniz'))setProgress('Mengenali teks halaman scan…'+current);
+      else if(status.toLowerCase().includes('loading'))setProgress('Menyiapkan model OCR lokal…'+current);
+    }});
+    throwIfAborted();
+    const recognizedReports=[];
+    for(let index=0;index<targets.length;index++){
+      throwIfAborted();
+      const pageNumber=targets[index];
+      setProgress('Merender halaman '+pageNumber+' ('+(index+1)+'/'+targets.length+')…');
+      const page=await pdf.getPage(pageNumber);
+      const canvas=document.createElement('canvas');
+      try{
+        const base=page.getViewport({scale:1});
+        const scale=Math.min(2,Math.sqrt(4000000/(base.width*base.height)),3000/Math.max(base.width,base.height));
+        if(!Number.isFinite(scale)||scale<0.35)throw new Error('Ukuran halaman terlalu besar untuk OCR lokal yang aman.');
+        const viewport=page.getViewport({scale});canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);
+        const context=canvas.getContext('2d',{alpha:false,willReadFrequently:true});
+        if(!context)throw new Error('Browser tidak dapat menyiapkan kanvas OCR.');
+        context.fillStyle='#fff';context.fillRect(0,0,canvas.width,canvas.height);
+        await page.render({canvasContext:context,viewport,background:'#ffffff'}).promise;
+        throwIfAborted();
+        setProgress('Mengenali teks halaman '+pageNumber+'…');
+        const recognized=await ocrWorker.recognize(canvas);
+        throwIfAborted();
+        const rawText=String(recognized.data.text||'').trim();const text=rawText.slice(0,20000);
+        recognizedReports.push({pageNumber,textChars:text.length,textFound:text.length>0,truncated:rawText.length>20000,ocrAttempted:true,classification:classifyLocalText(text,true)});
+      }finally{page.cleanup();canvas.width=0;canvas.height=0}
+    }
+    if(id!==requestId||controller.signal.aborted)return;
+    const resultByPage=new Map(recognizedReports.map(page=>[page.pageNumber,page]));
+    pageReports=pageReports.map(page=>resultByPage.has(page.pageNumber)?{...page,...resultByPage.get(page.pageNumber)}:page);
+    ocrNotice='OCR lokal selesai untuk halaman '+recognizedReports.map(page=>page.pageNumber).join(', ')+'. Teks tidak dikirim ke server.';
+    renderSummary(lastPreflightResult.pageCount);
+    setProgress('OCR lokal selesai. Periksa kembali hasil klasifikasi; teks OCR belum menjadi tabel Excel.');
+  }catch(error){
+    if(id===requestId&&!controller.signal.aborted)showError(error&&error.message?'OCR lokal gagal: '+error.message:'OCR lokal gagal. Periksa koneksi lalu coba lagi.');
+  }finally{
+    controller.signal.removeEventListener('abort',abortWorker);
+    await terminateWorker().catch(()=>undefined);
+    if(pdfTask)await pdfTask.destroy().catch(()=>undefined);
+    if(id===requestId){ocrBusy=false;ocrAbortController=null;preflight.disabled=false;localOcr.disabled=false;
+      const summary=summarizePageReports(pageReports,Boolean(lastPreflightResult&&lastPreflightResult.nextStartPage===null&&pageReports.length===lastPreflightResult.pageCount));
+      localOcr.hidden=summary.pagesNeedingOcr.length===0;
+      if(!localOcr.hidden)localOcr.textContent='OCR Lokal · Halaman '+summary.pagesNeedingOcr.slice(0,5).join(', ');
+      ocrProgress.hidden=false;
+    }
+  }
+}
+
 function cellsFromPositioned(items){
   const positioned=[];
   for(const item of items||[]){
