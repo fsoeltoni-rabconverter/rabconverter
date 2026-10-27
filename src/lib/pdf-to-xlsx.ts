@@ -63,10 +63,11 @@ function normalizedText(value: string) {
 }
 
 function parseIndonesianNumber(value: string): number | null {
-  let text = value.trim().replace(/^(?:rp|idr)\s*/i, "").replace(/\s/g, "").replace(/[^\d.,()+-]/g, "");
-  if (!text || !/\d/.test(text)) return null;
+  let text = value.trim().replace(/^(?:rp|idr)\s*/i, "").replace(/\s/g, "");
   const negative = text.startsWith("(") && text.endsWith(")");
-  text = text.replace(/[()+]/g, "");
+  text = text.replace(/[()]/g, "");
+  if (!/^[+-]?\d+(?:[.,]\d+)*$/.test(text)) return null;
+  text = text.replace(/\+/g, "");
   const dotCount = (text.match(/\./g) ?? []).length;
   const commaCount = (text.match(/,/g) ?? []).length;
 
@@ -225,7 +226,7 @@ function standardizeRow(cells: string[], mapping: Map<keyof StandardRow, number>
   };
 }
 
-function workbookCellRows(sourceRows: SourceRow[], pageCount: number, scannedPages: number) {
+function workbookCellRows(sourceRows: SourceRow[], fileName: string, pageCount: number, scannedPages: number) {
   const standardized: StandardRow[] = [];
   let headerMapping: Map<keyof StandardRow, number> | null = null;
   let itemIndex = 0;
@@ -311,7 +312,7 @@ function workbookCellRows(sourceRows: SourceRow[], pageCount: number, scannedPag
 
   const info = [
     ["RabConverter — Ringkasan Konversi"],
-    ["Nama file", ""],
+    ["Nama file", safeBaseName(fileName)],
     ["Halaman diproses", pageCount],
     ["Halaman yang memerlukan OCR", scannedPages],
     ["Baris tabel terdeteksi", standardized.filter((row) => normalizedText(row.description) !== "subtotal" && normalizedText(row.description) !== "total hasil konversi").length],
@@ -422,7 +423,7 @@ export async function convertPdfToXlsx(
     abortIfNeeded(signal);
     report({ phase: "writing-xlsx", completed: pageCount, total: pageCount, detail: "Menyusun workbook Excel…" });
     sourceRows.sort((left, right) => left.pageNumber - right.pageNumber || left.lineNumber - right.lineNumber);
-    const built = workbookCellRows(sourceRows, pageCount, scanPageNumbers.length);
+    const built = workbookCellRows(sourceRows, file.name, pageCount, scanPageNumbers.length);
     const xlsxData = XLSX.write(built.workbook, { bookType: "xlsx", type: "array" });
     const resultBytes = xlsxData instanceof Uint8Array ? xlsxData : new Uint8Array(xlsxData);
     return {
