@@ -212,17 +212,17 @@ function classifyLocalText(extractedText,ocrAttempted){
   const text=String(extractedText||'').trim();
   if(!text)return {status:ocrAttempted?'UNREADABLE_PDF':'NEEDS_OCR',score:0,signals:[],reasons:[ocrAttempted?'text_unreadable_after_ocr':'no_text_layer_ocr_needed']};
   const definitions=[
-    ['rab_title',3,/\\b(?:RAB|RENCANA\\s+ANGGARAN\\s+BIAYA|BOQ|BILL\\s+OF\\s+QUANTITIES|DAFTAR\\s+KUANTITAS(?:\\s+DAN\\s+HARGA)?|RENCANA\\s+BIAYA)\\b/i],
-    ['item_description',2,/\\b(?:uraian(?:\\s+pekerjaan)?|pekerjaan|description|deskripsi(?:\\s+pekerjaan)?|item\\s+pekerjaan)\\b/i],
-    ['quantity_or_unit',2,/\\b(?:volume|kuantitas|qty|quantity|satuan|unit|uom)\\b/i],
-    ['price_or_amount',2,/\\b(?:harga\\s+satuan|unit\\s+price|jumlah\\s+harga|amount|total\\s+(?:biaya|harga)|biaya\\s+total|nilai\\s+biaya|anggaran)\\b/i],
-    ['construction_terms',1,/\\b(?:material|upah|beton|pondasi|fondasi|ahsp|hspk|pasir|semen|pekerjaan\\s+tanah|konstruksi)\\b/i],
-    ['totals',1,/\\b(?:subtotal|sub\\s+total|grand\\s+total|jumlah\\s+akhir|rekapitulasi|pajak|ppn)\\b/i]
+    ['rab_title',3,/\b(?:RAB|RENCANA\s+ANGGARAN\s+BIAYA|BOQ|BILL\s+OF\s+QUANTITIES|DAFTAR\s+KUANTITAS(?:\s+DAN\s+HARGA)?|RENCANA\s+BIAYA)\b/i],
+    ['item_description',2,/\b(?:uraian(?:\s+pekerjaan)?|pekerjaan|description|deskripsi(?:\s+pekerjaan)?|item\s+pekerjaan)\b/i],
+    ['quantity_or_unit',2,/\b(?:volume|kuantitas|qty|quantity|satuan|unit|uom)\b/i],
+    ['price_or_amount',2,/\b(?:harga\s+satuan|unit\s+price|jumlah\s+harga|amount|total\s+(?:biaya|harga)|biaya\s+total|nilai\s+biaya|anggaran)\b/i],
+    ['construction_terms',1,/\b(?:material|upah|beton|pondasi|fondasi|ahsp|hspk|pasir|semen|pekerjaan\s+tanah|konstruksi)\b/i],
+    ['totals',1,/\b(?:subtotal|sub\s+total|grand\s+total|jumlah\s+akhir|rekapitulasi|pajak|ppn)\b/i]
   ];
   const signals=[];let score=0;
   for(const definition of definitions){if(definition[2].test(text)){signals.push(definition[0]);score+=definition[1]}}
-  const lines=text.split(/\\r?\\n/).map(line=>line.trim()).filter(Boolean);let qualifying=0;
-  for(const line of lines){const hasWords=/[A-Za-zÀ-ÖØ-öø-ÿ]{3,}/.test(line);const numbers=line.match(/(?:\\d{1,3}(?:[.,]\\d{3})+(?:[.,]\\d+)?|\\d+(?:[.,]\\d+)?)/g)||[];if(hasWords&&numbers.length>=2)qualifying++;if(qualifying>=2)break}
+  const lines=text.split(/\r?\n/).map(line=>line.trim()).filter(Boolean);let qualifying=0;
+  for(const line of lines){const hasWords=/[A-Za-zÀ-ÖØ-öø-ÿ]{3,}/.test(line);const numbers=line.match(/(?:\d{1,3}(?:[.,]\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)?)/g)||[];if(hasWords&&numbers.length>=2)qualifying++;if(qualifying>=2)break}
   if(qualifying>=2){signals.push('repeated_item_rows');score+=2}
   const description=signals.includes('item_description'),quantity=signals.includes('quantity_or_unit'),price=signals.includes('price_or_amount'),totals=signals.includes('totals');
   const structural=signals.includes('repeated_item_rows')||(description&&quantity&&price)||(description&&price&&totals);
