@@ -84,8 +84,11 @@ function getClientAddress(request: Request): string {
 
   const forwardedFor = request.headers.get("x-forwarded-for");
   if (forwardedFor) {
-    const firstAddress = forwardedFor.split(",")[0]?.trim();
-    if (firstAddress) return firstAddress;
+    // Proxies append addresses to this list; use the last hop, not an arbitrary first
+    // value a caller may have supplied in its own header.
+    const addressChain = forwardedFor.split(",").map((value) => value.trim()).filter(Boolean);
+    const lastAddress = addressChain.at(-1);
+    if (lastAddress) return lastAddress;
   }
 
   // Fail closed into one shared bucket if the edge does not provide a client address.
@@ -156,7 +159,8 @@ function isEncryptedPdfError(error: unknown): boolean {
 
 Deno.serve(async (request: Request) => {
   const origin = request.headers.get("origin") ?? "";
-  if (!ALLOWED_ORIGINS.has(origin)) {
+  const publicHealthProbe = request.method === "GET" && origin === "";
+  if (!ALLOWED_ORIGINS.has(origin) && !publicHealthProbe) {
     return new Response(JSON.stringify({
       ok: false,
       code: "ORIGIN_NOT_ALLOWED",
