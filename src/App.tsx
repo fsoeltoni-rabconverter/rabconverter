@@ -395,7 +395,7 @@ export default function App() {
                     {classificationSummary.truncatedPages.length > 0
                       ? ` · teks pada ${classificationSummary.truncatedPages.length} halaman dibatasi untuk menjaga penggunaan memori`
                       : ""}
-                    {" "}File tidak disimpan permanen dan teks lengkap tidak dikirim kembali ke browser.
+                    {" "}File tidak disimpan permanen; ekstraksi server hanya mengirim ringkasan, sedangkan OCR memakai hasil sementara di perangkat.
                   </span>
                 )}
                 {ocrBusy && <span className="preflight-detail" role="status">{ocrProgressText}</span>}
