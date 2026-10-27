@@ -114,4 +114,4 @@ The classifier's statuses are typed results, while error codes represent validat
 
 ## Scope boundaries
 
-This slice implements browser header/size validation and a deterministic extracted-text classifier. It does not yet implement server-side PDF parsing, page counting, password detection, OCR, storage/upload, credit gating, or conversion. Those capabilities must not be exposed as working UI features until their backend is available and verified.
+This slice implements browser header/size validation, an extracted-text classifier for a later stage, and a server endpoint that parses PDF structure and counts pages without rendering pages or running OCR. The original PDF is sent directly to the endpoint, held only in request memory, and not written to persistent storage. The endpoint is public for the preview only, with exact-origin CORS plus a database-backed per-client cap of 10 requests and 120 MiB per 15-minute window; CORS is not treated as authentication. Text extraction/OCR, RAB classification during upload, credit checks, storage, and conversion remain out of scope.

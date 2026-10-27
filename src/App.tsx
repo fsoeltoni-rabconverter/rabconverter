@@ -1,6 +1,14 @@
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { validatePdfFile } from "./lib/preflight.js";
 
+const PREFLIGHT_ENDPOINT = import.meta.env.VITE_PREFLIGHT_URL?.trim()
+  || "https://zkcziucjogprfzhjuaex.supabase.co/functions/v1/preflight-rab";
+
+type ServerPreflightResult = {
+  pageCount: number;
+  sizeBytes: number;
+};
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -31,6 +39,10 @@ export default function App() {
   const [message, setMessage] = useState("");
   const pickerOpenRef = useRef(false);
   const validationRunRef = useRef(0);
+  const preflightRunRef = useRef(0);
+  const preflightAbortRef = useRef<AbortController | null>(null);
+  const [preflightBusy, setPreflightBusy] = useState(false);
+  const [preflightResult, setPreflightResult] = useState<ServerPreflightResult | null>(null);
 
   useEffect(() => {
     const input = inputRef.current;
@@ -46,9 +58,15 @@ export default function App() {
   }, []);
 
   async function validateAndSetFile(file?: File) {
-    const validationRun = ++validationRunRef.current;
-    setMessage("");
     if (!file) return;
+
+    const validationRun = ++validationRunRef.current;
+    preflightRunRef.current += 1;
+    preflightAbortRef.current?.abort();
+    preflightAbortRef.current = null;
+    setPreflightBusy(false);
+    setPreflightResult(null);
+    setMessage("");
 
     const validation = await validatePdfFile(file);
     if (validationRun !== validationRunRef.current) return;
@@ -60,6 +78,60 @@ export default function App() {
     }
 
     setSelectedFile(file);
+  }
+
+  function removeSelectedFile() {
+    validationRunRef.current += 1;
+    preflightRunRef.current += 1;
+    preflightAbortRef.current?.abort();
+    preflightAbortRef.current = null;
+    setSelectedFile(null);
+    setPreflightBusy(false);
+    setPreflightResult(null);
+    setMessage("");
+  }
+
+  async function runPreflight() {
+    if (!selectedFile || preflightBusy) return;
+
+    const runId = ++preflightRunRef.current;
+    const controller = new AbortController();
+    preflightAbortRef.current = controller;
+    setPreflightBusy(true);
+    setPreflightResult(null);
+    setMessage("");
+
+    try {
+      const response = await fetch(PREFLIGHT_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/pdf" },
+        body: selectedFile,
+        signal: controller.signal,
+      });
+
+      const payload = await response.json().catch(() => null) as
+        | { ok?: boolean; pageCount?: number; sizeBytes?: number; code?: string; message?: string }
+        | null;
+
+      if (runId !== preflightRunRef.current) return;
+      if (!response.ok || !payload?.ok || typeof payload.pageCount !== "number") {
+        setMessage(payload?.message || "Pemeriksaan PDF gagal. Coba lagi dengan file yang berbeda.");
+        return;
+      }
+
+      setPreflightResult({
+        pageCount: payload.pageCount,
+        sizeBytes: typeof payload.sizeBytes === "number" ? payload.sizeBytes : selectedFile.size,
+      });
+    } catch (error) {
+      if (runId !== preflightRunRef.current || (error instanceof Error && error.name === "AbortError")) return;
+      setMessage("Tidak dapat menghubungi layanan pemeriksaan. Periksa koneksi lalu coba lagi.");
+    } finally {
+      if (runId === preflightRunRef.current) {
+        setPreflightBusy(false);
+        preflightAbortRef.current = null;
+      }
+    }
   }
 
   function openFilePicker() {
@@ -139,15 +211,26 @@ export default function App() {
                 <strong title={selectedFile.name}>{selectedFile.name}</strong>
                 <span>{formatBytes(selectedFile.size)} · PDF</span>
               </div>
-              <button className="remove-file" type="button" onClick={() => { setSelectedFile(null); setMessage(""); }} aria-label="Hapus pilihan file">×</button>
-              <div className="preview-notice">
+              <button className="remove-file" type="button" onClick={removeSelectedFile} aria-label="Hapus pilihan file">×</button>
+              <div className={`preflight-panel ${preflightResult ? "is-success" : ""}`} aria-live="polite">
                 <span className="notice-dot" />
-                Pratinjau awal — kuota dan konversi belum dihubungkan.
+                {preflightBusy
+                  ? "Memeriksa struktur PDF di server…"
+                  : preflightResult
+                    ? `Struktur PDF valid · ${preflightResult.pageCount} halaman`
+                    : "Pemeriksaan struktur saja; belum membaca tabel RAB atau menjalankan OCR."}
+                {preflightResult && (
+                  <span className="preflight-detail">
+                    File terbaca dan tidak disimpan permanen. Isi dokumen belum diklasifikasikan sebagai RAB/BoQ.
+                  </span>
+                )}
               </div>
-              <button className="primary-button" type="button" disabled>
-                <span>Konversi PDF</span><ArrowIcon />
+              <button className="primary-button" type="button" onClick={runPreflight} disabled={preflightBusy}>
+                <span>{preflightBusy ? "Memeriksa PDF…" : preflightResult ? "Periksa Ulang PDF" : "Periksa PDF"}</span><ArrowIcon />
               </button>
-              <p className="file-limit">File belum dikirim ke server.</p>
+              <p className="file-limit">
+                {preflightBusy ? "Pemrosesan sementara · Tanpa OCR" : "PDF dikirim untuk diperiksa, lalu langsung dibuang."}
+              </p>
             </div>
           )}
           <input ref={inputRef} className="visually-hidden" type="file" accept="application/pdf,.pdf" onChange={handleInputChange} aria-label="Pilih dokumen PDF RAB" />
