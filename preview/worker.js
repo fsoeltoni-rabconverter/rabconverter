@@ -391,7 +391,14 @@ function downloadAiWorkbook(payload,fileName){
   return {fileName:base+'.xlsx'};
 }
 async function convertAndDownloadExcel(){
-  if(!selectedFile||busy||ocrBusy||conversionBusy)return;
+  if(!selectedFile){
+    showError('Pilih PDF sebelum menjalankan konversi AI.');
+    return;
+  }
+  if(busy||ocrBusy||conversionBusy){
+    showError('Tunggu proses yang sedang berjalan selesai sebelum memulai konversi.');
+    return;
+  }
   conversionBusy=true;conversionNotice='';conversionController=new AbortController();const id=++requestId,signal=conversionController.signal;
   const setProgress=(value)=>{ocrProgress.hidden=false;ocrProgress.textContent=value};
   preflight.disabled=true;localOcr.disabled=true;convertXlsx.disabled=true;convertXlsx.textContent='AI sedang membaca dokumen…';err.hidden=true;
