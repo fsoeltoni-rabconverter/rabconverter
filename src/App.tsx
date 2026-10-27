@@ -353,7 +353,7 @@ export default function App() {
       window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 30_000);
 
       setConversionNotice(
-        `File Excel berhasil dibuat: ${result.fileName}. ${result.pagesProcessed} halaman diproses; ${result.scannedPages} halaman menggunakan OCR; ${result.structuredRows} baris terstruktur ditemukan. Cocokkan hasil dengan PDF asli sebelum dipakai.`,
+        `File Excel berhasil dibuat: ${result.fileName}. ${result.pagesProcessed} halaman diproses; ${result.scannedPages} halaman menggunakan OCR; ${result.structuredRows} baris tabel dan ${result.sourceLines} baris sumber ditemukan. Periksa sheet Teks Sumber dan cocokkan angka dengan PDF asli sebelum dipakai.`,
       );
       setConversionProgressText("");
     } catch (error) {
