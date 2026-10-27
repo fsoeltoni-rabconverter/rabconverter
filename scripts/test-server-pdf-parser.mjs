@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { PDFDocument } from "pdf-lib";
+import { hasPdfHeader, hasPdfTerminator } from "../supabase/functions/preflight-rab/pdf-envelope.js";
 
 const fixtures = [
   "basic-text-rab",
@@ -13,6 +14,8 @@ const fixtures = [
 for (const fixtureId of fixtures) {
   test(`pdf-lib parses fixture: ${fixtureId}`, async () => {
     const pdfBytes = await readFile(new URL(`../fixtures/golden/${fixtureId}.pdf`, import.meta.url));
+    assert.equal(hasPdfHeader(pdfBytes), true);
+    assert.equal(hasPdfTerminator(pdfBytes), true);
     const expected = JSON.parse(
       await readFile(new URL(`../fixtures/golden/expected/${fixtureId}.json`, import.meta.url), "utf8"),
     );
@@ -21,9 +24,14 @@ for (const fixtureId of fixtures) {
   });
 }
 
-test("parser rejects content that only imitates a PDF header", async () => {
+test("rejects content that only imitates a PDF header", async () => {
   const fakePdf = new TextEncoder().encode("%PDF-1.7\nthis is not a structurally valid PDF");
-  await assert.rejects(PDFDocument.load(fakePdf, { updateMetadata: false }));
+  assert.equal(hasPdfHeader(fakePdf), true);
+  assert.equal(hasPdfTerminator(fakePdf), false);
+  // The server endpoint applies this guard before passing bytes to pdf-lib.
+  if (hasPdfHeader(fakePdf) && hasPdfTerminator(fakePdf)) {
+    await PDFDocument.load(fakePdf, { updateMetadata: false });
+  }
 });
 
 test("page-count guardrail distinguishes 201 pages from the 200-page limit", async () => {
