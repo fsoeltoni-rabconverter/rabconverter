@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { classifyRabDocument, summarizeRabPageClassifications, validatePdfFile, type RabPageTextResult } from "./lib/preflight.js";
-import { MAX_OCR_PAGES_PER_RUN, ocrPdfPages, type LocalOcrProgress } from "./lib/local-ocr.js";
+import { MAX_OCR_PAGES_PER_RUN, ocrPdfPages, type LocalOcrPageResult, type LocalOcrProgress } from "./lib/local-ocr.js";
+import { MAX_CONVERSION_PAGES, convertPdfToXlsx, type ConversionProgress } from "./lib/pdf-to-xlsx.js";
 
 const PREFLIGHT_ENDPOINT = import.meta.env.VITE_PREFLIGHT_URL?.trim()
   || "https://zkcziucjogprfzhjuaex.supabase.co/functions/v1/preflight-rab";
@@ -58,8 +59,14 @@ export default function App() {
   const [ocrBusy, setOcrBusy] = useState(false);
   const [ocrProgressText, setOcrProgressText] = useState("");
   const [ocrNotice, setOcrNotice] = useState("");
+  const [ocrPages, setOcrPages] = useState<Record<number, LocalOcrPageResult>>({});
+  const [conversionBusy, setConversionBusy] = useState(false);
+  const [conversionProgressText, setConversionProgressText] = useState("");
+  const [conversionNotice, setConversionNotice] = useState("");
   const ocrAbortRef = useRef<AbortController | null>(null);
   const ocrRunRef = useRef(0);
+  const conversionAbortRef = useRef<AbortController | null>(null);
+  const conversionRunRef = useRef(0);
 
   useEffect(() => {
     const input = inputRef.current;
@@ -84,10 +91,17 @@ export default function App() {
     ocrRunRef.current += 1;
     ocrAbortRef.current?.abort();
     ocrAbortRef.current = null;
+    conversionRunRef.current += 1;
+    conversionAbortRef.current?.abort();
+    conversionAbortRef.current = null;
     setPreflightBusy(false);
     setOcrBusy(false);
     setOcrProgressText("");
     setOcrNotice("");
+    setOcrPages({});
+    setConversionBusy(false);
+    setConversionProgressText("");
+    setConversionNotice("");
     setPreflightResult(null);
     setPageReports([]);
     setReviewStartPage(1);
@@ -113,11 +127,18 @@ export default function App() {
     ocrRunRef.current += 1;
     ocrAbortRef.current?.abort();
     ocrAbortRef.current = null;
+    conversionRunRef.current += 1;
+    conversionAbortRef.current?.abort();
+    conversionAbortRef.current = null;
     setSelectedFile(null);
     setPreflightBusy(false);
     setOcrBusy(false);
     setOcrProgressText("");
     setOcrNotice("");
+    setOcrPages({});
+    setConversionBusy(false);
+    setConversionProgressText("");
+    setConversionNotice("");
     setPreflightResult(null);
     setPageReports([]);
     setReviewStartPage(1);
@@ -125,7 +146,7 @@ export default function App() {
   }
 
   async function runPreflight() {
-    if (!selectedFile || preflightBusy || ocrBusy) return;
+    if (!selectedFile || preflightBusy || ocrBusy || conversionBusy) return;
 
     const restartingReview = preflightResult !== null && preflightResult.nextStartPage === null;
     const startPage = restartingReview ? 1 : (preflightResult?.nextStartPage ?? 1);
@@ -204,7 +225,7 @@ export default function App() {
   }
 
   async function runLocalOcr() {
-    if (!selectedFile || ocrBusy || preflightBusy || !classificationSummary?.pagesNeedingOcr.length) return;
+    if (!selectedFile || ocrBusy || preflightBusy || conversionBusy || !classificationSummary?.pagesNeedingOcr.length) return;
 
     const pagesToOcr = classificationSummary.pagesNeedingOcr.slice(0, MAX_OCR_PAGES_PER_RUN);
     const runId = ++ocrRunRef.current;
@@ -239,6 +260,10 @@ export default function App() {
       if (runId !== ocrRunRef.current || controller.signal.aborted) return;
 
       const recognizedPages = new Map(results.map((result) => [result.pageNumber, result]));
+      setOcrPages((previous) => ({
+        ...previous,
+        ...Object.fromEntries(results.map((result) => [result.pageNumber, result])),
+      }));
       setPageReports((previous) => previous.map((page) => {
         const result = recognizedPages.get(page.pageNumber);
         if (!result) return page;
@@ -268,6 +293,79 @@ export default function App() {
       if (runId === ocrRunRef.current) {
         setOcrBusy(false);
         ocrAbortRef.current = null;
+      }
+    }
+  }
+
+  async function runConversion() {
+    if (
+      !selectedFile ||
+      !preflightResult ||
+      !reviewComplete ||
+      preflightBusy ||
+      ocrBusy ||
+      conversionBusy
+    ) return;
+
+    const runId = ++conversionRunRef.current;
+    const controller = new AbortController();
+    conversionAbortRef.current = controller;
+    setConversionBusy(true);
+    setConversionProgressText("Menyiapkan konversi lokal…");
+    setConversionNotice("");
+    setMessage("");
+
+    const describeProgress = (progress: ConversionProgress) => {
+      if (progress.phase === "opening") {
+        setConversionProgressText("Membuka PDF di perangkat…");
+      } else if (progress.phase === "extracting-text") {
+        setConversionProgressText(progress.detail);
+      } else if (progress.phase === "ocr") {
+        setConversionProgressText(progress.detail);
+      } else {
+        setConversionProgressText("Menyusun file Excel…");
+      }
+    };
+
+    try {
+      const result = await convertPdfToXlsx(selectedFile, {
+        signal: controller.signal,
+        cachedOcrPages: ocrPages,
+        onProgress: describeProgress,
+      });
+      if (runId !== conversionRunRef.current || controller.signal.aborted) return;
+
+      const buffer = result.bytes.buffer.slice(
+        result.bytes.byteOffset,
+        result.bytes.byteOffset + result.bytes.byteLength,
+      ) as ArrayBuffer;
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const downloadUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = downloadUrl;
+      anchor.download = result.fileName;
+      anchor.style.display = "none";
+      document.body.append(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 30_000);
+
+      setConversionNotice(
+        `File Excel berhasil dibuat: ${result.fileName}. ${result.pagesProcessed} halaman diproses; ${result.scannedPages} halaman menggunakan OCR; ${result.structuredRows} baris terstruktur ditemukan. Cocokkan hasil dengan PDF asli sebelum dipakai.`,
+      );
+      setConversionProgressText("");
+    } catch (error) {
+      if (runId !== conversionRunRef.current || controller.signal.aborted || (error instanceof Error && error.name === "AbortError")) return;
+      setMessage(error instanceof Error
+        ? `Konversi gagal: ${error.message}`
+        : "Konversi gagal. Coba PDF yang lain.");
+      setConversionProgressText("");
+    } finally {
+      if (runId === conversionRunRef.current) {
+        setConversionBusy(false);
+        conversionAbortRef.current = null;
       }
     }
   }
@@ -400,6 +498,8 @@ export default function App() {
                 )}
                 {ocrBusy && <span className="preflight-detail" role="status">{ocrProgressText}</span>}
                 {ocrNotice && <span className="preflight-detail">{ocrNotice}</span>}
+                {conversionBusy && <span className="preflight-detail" role="status">{conversionProgressText}</span>}
+                {conversionNotice && <span className="preflight-detail">{conversionNotice}</span>}
               </div>
               <button className="primary-button" type="button" onClick={runPreflight} disabled={preflightBusy || ocrBusy}>
                 <span>
@@ -426,12 +526,26 @@ export default function App() {
                     : `OCR Lokal · Halaman ${classificationSummary.pagesNeedingOcr.slice(0, MAX_OCR_PAGES_PER_RUN).join(", ")}`}
                 </button>
               )}
+              {reviewComplete && (
+                <button
+                  className="export-button"
+                  type="button"
+                  onClick={runConversion}
+                  disabled={preflightBusy || ocrBusy || conversionBusy}
+                >
+                  {conversionBusy ? "Menyusun Excel…" : "Konversi & Unduh Excel"}
+                </button>
+              )}
               <p className="file-limit">
                 {preflightBusy
                   ? "Mengekstrak maksimal 5 halaman teks"
                   : ocrBusy
                     ? "OCR berjalan di perangkat · halaman scan saja · tanpa unggah gambar"
-                    : "Periksa teks maksimal 5 halaman per tahap. OCR berjalan lokal, maksimal 5 halaman tiap proses."}
+                    : conversionBusy
+                      ? conversionProgressText || "Mengekstrak tabel dan membuat file Excel di perangkat…"
+                      : reviewComplete
+                        ? `Siap konversi lokal · maksimal ${MAX_CONVERSION_PAGES} halaman · file tidak dikirim ke layanan konversi.`
+                        : "Periksa teks maksimal 5 halaman per tahap. OCR berjalan lokal, maksimal 5 halaman tiap proses."}
               </p>
             </div>
           )}
