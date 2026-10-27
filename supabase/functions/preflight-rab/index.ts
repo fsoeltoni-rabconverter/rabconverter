@@ -193,12 +193,14 @@ Deno.serve(async (request: Request) => {
     return jsonResponse({
       ok: true,
       service: "preflight-rab",
-      mode: "structure-only",
+      mode: "progressive-text-extraction",
       maxFileSizeBytes: MAX_FILE_SIZE_BYTES,
       maxPages: MAX_PDF_PAGES,
+      pagesPerRequest: 5,
       storesUploadedPdf: false,
+      returnsExtractedText: false,
       performsOcr: false,
-      performsRabClassification: false,
+      performsRabClassification: true,
     }, 200, origin);
   }
 
