@@ -307,7 +307,12 @@ async function extractRange(
   try {
     response = await callGemini(bytes, startPage, endPage, context, apiKey, model, usage);
     if (response.truncated) throw new Error("AI_OUTPUT_TRUNCATED");
-    const normalized = normalizeAiBatch(response.output, { startPage, pageCount: endPage - startPage + 1 });
+    let normalized: BatchOutput;
+    try {
+      normalized = normalizeAiBatch(response.output, { startPage, pageCount: endPage - startPage + 1 });
+    } catch {
+      throw new Error("AI_INVALID_JSON");
+    }
     return normalized;
   } catch (error) {
     const reason = error instanceof Error ? error.message : "AI_INVALID_OUTPUT";
