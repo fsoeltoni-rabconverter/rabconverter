@@ -6,6 +6,7 @@ const MAX_FILE_SIZE_BYTES = 30 * 1024 * 1024;
 const MAX_PDF_PAGES = 50;
 const PAGES_PER_BATCH = 5;
 const MAX_OUTPUT_TOKENS = 16_384;
+const MAX_MODEL_CALLS_PER_DOCUMENT = 30;
 const GOOGLE_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models/";
 
 const ALLOWED_ORIGINS = new Set([
@@ -219,6 +220,10 @@ async function callGemini(pdfBytes: Uint8Array, startPage: number, endPage: numb
 
   let response: Response | null = null;
   for (let attempt = 0; attempt < 2; attempt += 1) {
+    if (usage.calls >= MAX_MODEL_CALLS_PER_DOCUMENT) {
+      throw new Error("AI_CALL_BUDGET_EXCEEDED");
+    }
+    usage.calls += 1;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 110_000);
     try {
@@ -257,8 +262,6 @@ async function callGemini(pdfBytes: Uint8Array, startPage: number, endPage: numb
   const metadata = payload?.usageMetadata ?? {};
   usage.inputTokens += Number(metadata.promptTokenCount ?? 0);
   usage.outputTokens += Number(metadata.candidatesTokenCount ?? 0) + Number(metadata.thoughtsTokenCount ?? 0);
-  usage.calls += 1;
-
   const candidate = payload?.candidates?.[0];
   const finishReason = String(candidate?.finishReason ?? "");
   if (finishReason === "MAX_TOKENS") return { truncated: true as const, output: null };
@@ -379,6 +382,7 @@ Deno.serve(async (request: Request) => {
       provider: "google-gemini",
       model: Deno.env.get("RAB_AI_MODEL") ?? "gemini-4-argon",
       configured: Boolean(Deno.env.get("GEMINI_API_KEY")),
+      maxModelCallsPerDocument: MAX_MODEL_CALLS_PER_DOCUMENT,
       maxFileSizeBytes: MAX_FILE_SIZE_BYTES,
       maxPages: MAX_PDF_PAGES,
       pagesPerBatch: PAGES_PER_BATCH,
@@ -464,6 +468,15 @@ Deno.serve(async (request: Request) => {
         batch = await extractRange(sourcePdf, startPage, endPage, previousContext, apiKey, model, usage);
       } catch (error) {
         const code = error instanceof Error ? error.message : "AI_EXTRACTION_FAILED";
+        if (code === "AI_CALL_BUDGET_EXCEEDED") {
+          return errorResponse(
+            "AI_CALL_BUDGET_EXCEEDED",
+            "Konversi dihentikan karena mencapai batas panggilan AI untuk satu dokumen. Tidak ada workbook parsial yang dibuat; pecah PDF menjadi file lebih kecil lalu coba lagi.",
+            422,
+            origin,
+            { maxModelCallsPerDocument: MAX_MODEL_CALLS_PER_DOCUMENT },
+          );
+        }
         if (code === "AI_PROVIDER_AUTH_FAILED") {
           console.error("Gemini API key was rejected");
           return errorResponse("AI_PROVIDER_AUTH_FAILED", "Kunci API AI ditolak. Periksa secret GEMINI_API_KEY dan akses modelnya.", 502, origin);
@@ -494,7 +507,11 @@ Deno.serve(async (request: Request) => {
       previousContext = buildPreviousContext(batch.rows, previousContext);
     }
 
-    allRows.sort((left, right) => left.sourcePage - right.sourcePage || left.rowIndex - right.rowIndex);
+    allRows.sort((left, right) =>
+      (left.sourcePage ?? Number.MAX_SAFE_INTEGER) -
+        (right.sourcePage ?? Number.MAX_SAFE_INTEGER) ||
+      left.rowIndex - right.rowIndex,
+    );
     // Row index is workbook-global, not repeated from each five-page AI batch.
     allRows.forEach((row, index) => { row.rowIndex = index + 1; });
     if (allRows.length === 0) {
