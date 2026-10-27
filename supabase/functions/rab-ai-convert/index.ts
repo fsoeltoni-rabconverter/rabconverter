@@ -161,11 +161,12 @@ function bytesToBase64(bytes: Uint8Array) {
 function buildPreviousContext(rows: Array<{ rowType: string; description: string; code: string; itemNumber: string }>, existing: string) {
   const sectionTrail = rows.filter((row) => row.rowType === "section" && row.description).slice(-8).map((row) => row.description);
   const items = rows.filter((row) => row.rowType === "item" && row.description).slice(-3).map((row) => `${row.itemNumber ? row.itemNumber + " " : ""}${row.description}`);
+  const recentContext = existing.slice(-1_500);
   return [
-    existing,
+    recentContext,
     sectionTrail.length ? `Section terakhir yang terlihat pada batch sebelumnya (konteks saja; jangan salin ulang): ${sectionTrail.join(" > ")}` : "",
     items.length ? `Contoh item terakhir sebelumnya (konteks saja; jangan salin ulang): ${items.join(" | ")}` : "",
-  ].filter(Boolean).join("\n");
+  ].filter(Boolean).join("\n").slice(-3_500);
 }
 
 function promptForBatch(startPage: number, endPage: number, context: string) {
@@ -494,6 +495,8 @@ Deno.serve(async (request: Request) => {
     }
 
     allRows.sort((left, right) => left.sourcePage - right.sourcePage || left.rowIndex - right.rowIndex);
+    // Row index is workbook-global, not repeated from each five-page AI batch.
+    allRows.forEach((row, index) => { row.rowIndex = index + 1; });
     if (allRows.length === 0) {
       return errorResponse(
         "AI_NO_ROWS",
