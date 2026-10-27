@@ -236,6 +236,7 @@ Deno.serve(async (request: Request) => {
     ? MAX_FILE_SIZE_BYTES
     : Math.max(1, declaredLength);
 
+  let pdfParsingStarted = false;
   try {
     const fingerprint = await makeFingerprint(getClientAddress(request), serviceKey);
     const supabase = createClient(supabaseUrl, serviceKey, {
@@ -290,6 +291,7 @@ Deno.serve(async (request: Request) => {
     }
 
     // Parse document structure only: no page rendering, text extraction, OCR, or file persistence.
+    pdfParsingStarted = true;
     const pdf = await PDFDocument.load(bytes, { updateMetadata: false });
     const pageCount = pdf.getPageCount();
 
@@ -330,6 +332,11 @@ Deno.serve(async (request: Request) => {
       return errorResponse("FILE_TOO_LARGE", "Ukuran file maksimum adalah 30 MiB.", 413, origin, {
         maxFileSizeBytes: MAX_FILE_SIZE_BYTES,
       });
+    }
+
+    if (!pdfParsingStarted) {
+      console.error("preflight dependency failed");
+      return errorResponse("PREFLIGHT_TEMPORARY_FAILURE", "Layanan pemeriksaan sedang bermasalah. Coba lagi nanti.", 503, origin);
     }
 
     if (isEncryptedPdfError(error)) {
