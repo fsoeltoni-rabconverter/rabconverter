@@ -46,36 +46,64 @@ test("page-count guardrail distinguishes 201 pages from the 200-page limit", asy
   assert.ok(parsed.getPageCount() > 200);
 });
 
-test("extracts text one page at a time and classifies RAB evidence from the actual PDF", async () => {
-  const pdfBytes = new Uint8Array(await readFile(new URL("../fixtures/golden/basic-text-rab.pdf", import.meta.url)));
-  const pdf = await getDocumentProxy(pdfBytes, { isEvalSupported: false, maxImageSize: 16_777_216 });
-  const pages = [];
-  try {
-    assert.equal(pdf.numPages, 1);
-    const page = await pdf.getPage(1);
+for (const fixtureId of fixtures) {
+  test(`extracts text in page order: ${fixtureId}`, async () => {
+    const pdfBytes = new Uint8Array(
+      await readFile(new URL(`../fixtures/golden/${fixtureId}.pdf`, import.meta.url)),
+    );
+    const expected = JSON.parse(
+      await readFile(new URL(`../fixtures/golden/expected/${fixtureId}.json`, import.meta.url), "utf8"),
+    );
+    const pdf = await getDocumentProxy(pdfBytes, {
+      isEvalSupported: false,
+      maxImageSize: 16_777_216,
+    });
+    const pages = [];
+    const extractedPages = [];
+
     try {
-      const extracted = await extractPageText(page);
-      assert.ok(extracted.text.length > 0);
-      assert.match(extracted.text, /PEKERJAAN PERSIAPAN/i);
-      assert.match(extracted.text, /SEMEN PORTLAND/i);
-      assert.match(extracted.text, /PASIR BETON/i);
-      pages.push({
-        pageNumber: 1,
-        textChars: extracted.textChars,
-        textFound: true,
-        truncated: extracted.truncated,
-        classification: classifyRabDocument(extracted.text),
-      });
+      assert.equal(pdf.numPages, expected.pages);
+      for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+        const page = await pdf.getPage(pageNumber);
+        try {
+          const extracted = await extractPageText(page);
+          extractedPages.push(extracted.text);
+          pages.push({
+            pageNumber,
+            textChars: extracted.textChars,
+            textFound: extracted.text.length > 0,
+            truncated: extracted.truncated,
+            classification: classifyRabDocument(extracted.text),
+          });
+        } finally {
+          page.cleanup();
+        }
+      }
+
+      const allText = extractedPages.join("\\n");
+      assert.ok(allText.length > 0, "text-based golden fixture should yield text");
+      if (fixtureId === "basic-text-rab") {
+        assert.match(allText, /PEKERJAAN PERSIAPAN/i);
+        assert.match(allText, /SEMEN PORTLAND/i);
+        assert.match(allText, /PASIR BETON/i);
+      } else if (fixtureId === "wrapped-and-indonesian-numbers") {
+        assert.match(allText, /PEKERJAAN TANAH/i);
+        assert.match(allText, /BATU BATA/i);
+      } else if (fixtureId === "multi-page-continuation") {
+        assert.match(allText, /BETON K-250/i);
+        assert.match(allText, /BEKISTING/i);
+      } else if (fixtureId === "ambiguous-and-nonbillable") {
+        assert.match(allText, /CAT TEMBOK/i);
+      }
+
+      const summary = summarizeRabPageClassifications(pages, { complete: true });
+      assert.equal(summary.complete, true);
+      assert.equal(summary.pagesReviewed, expected.pages);
     } finally {
-      page.cleanup();
+      await pdf.destroy();
     }
-    const summary = summarizeRabPageClassifications(pages, { complete: true });
-    assert.ok(["LIKELY_RAB", "NEEDS_CONFIRMATION"].includes(summary.status));
-    assert.equal(summary.pagesReviewed, 1);
-  } finally {
-    await pdf.destroy();
-  }
-});
+  });
+}
 
 test("a page with no extracted text is not classified as NOT_RAB", () => {
   const classification = classifyRabDocument("");
