@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { classifyRabDocument, summarizeRabPageClassifications, validatePdfFile, type RabPageTextResult } from "./lib/preflight.js";
-import { MAX_OCR_PAGES_PER_RUN, ocrPdfPages, type LocalOcrPageResult, type LocalOcrProgress } from "./lib/local-ocr.js";
+import { MAX_OCR_PAGES_PER_RUN, ocrPdfPages, type LocalOcrProgress } from "./lib/local-ocr.js";
 import { AiConversionError, requestAiRabConversion } from "./lib/ai-conversion.js";
 import { downloadAiWorkbook } from "./lib/ai-workbook.js";
 
@@ -60,7 +60,6 @@ export default function App() {
   const [ocrBusy, setOcrBusy] = useState(false);
   const [ocrProgressText, setOcrProgressText] = useState("");
   const [ocrNotice, setOcrNotice] = useState("");
-  const [ocrPages, setOcrPages] = useState<Record<number, LocalOcrPageResult>>({});
   const [conversionBusy, setConversionBusy] = useState(false);
   const [conversionProgressText, setConversionProgressText] = useState("");
   const [conversionNotice, setConversionNotice] = useState("");
@@ -99,7 +98,6 @@ export default function App() {
     setOcrBusy(false);
     setOcrProgressText("");
     setOcrNotice("");
-    setOcrPages({});
     setConversionBusy(false);
     setConversionProgressText("");
     setConversionNotice("");
@@ -261,10 +259,6 @@ export default function App() {
       if (runId !== ocrRunRef.current || controller.signal.aborted) return;
 
       const recognizedPages = new Map(results.map((result) => [result.pageNumber, result]));
-      setOcrPages((previous) => ({
-        ...previous,
-        ...Object.fromEntries(results.map((result) => [result.pageNumber, result])),
-      }));
       setPageReports((previous) => previous.map((page) => {
         const result = recognizedPages.get(page.pageNumber);
         if (!result) return page;
