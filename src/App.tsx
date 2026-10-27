@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from "react";
-import { summarizeRabPageClassifications, validatePdfFile, type RabPageTextResult } from "./lib/preflight.js";
+import { classifyRabDocument, summarizeRabPageClassifications, validatePdfFile, type RabPageTextResult } from "./lib/preflight.js";
+import { MAX_OCR_PAGES_PER_RUN, ocrPdfPages, type LocalOcrProgress } from "./lib/local-ocr.js";
 
 const PREFLIGHT_ENDPOINT = import.meta.env.VITE_PREFLIGHT_URL?.trim()
   || "https://zkcziucjogprfzhjuaex.supabase.co/functions/v1/preflight-rab";
@@ -54,6 +55,11 @@ export default function App() {
   const [preflightResult, setPreflightResult] = useState<ServerPreflightResult | null>(null);
   const [pageReports, setPageReports] = useState<RabPageTextResult[]>([]);
   const [reviewStartPage, setReviewStartPage] = useState(1);
+  const [ocrBusy, setOcrBusy] = useState(false);
+  const [ocrProgressText, setOcrProgressText] = useState("");
+  const [ocrNotice, setOcrNotice] = useState("");
+  const ocrAbortRef = useRef<AbortController | null>(null);
+  const ocrRunRef = useRef(0);
 
   useEffect(() => {
     const input = inputRef.current;
@@ -75,7 +81,13 @@ export default function App() {
     preflightRunRef.current += 1;
     preflightAbortRef.current?.abort();
     preflightAbortRef.current = null;
+    ocrRunRef.current += 1;
+    ocrAbortRef.current?.abort();
+    ocrAbortRef.current = null;
     setPreflightBusy(false);
+    setOcrBusy(false);
+    setOcrProgressText("");
+    setOcrNotice("");
     setPreflightResult(null);
     setPageReports([]);
     setReviewStartPage(1);
@@ -98,8 +110,14 @@ export default function App() {
     preflightRunRef.current += 1;
     preflightAbortRef.current?.abort();
     preflightAbortRef.current = null;
+    ocrRunRef.current += 1;
+    ocrAbortRef.current?.abort();
+    ocrAbortRef.current = null;
     setSelectedFile(null);
     setPreflightBusy(false);
+    setOcrBusy(false);
+    setOcrProgressText("");
+    setOcrNotice("");
     setPreflightResult(null);
     setPageReports([]);
     setReviewStartPage(1);
@@ -107,13 +125,15 @@ export default function App() {
   }
 
   async function runPreflight() {
-    if (!selectedFile || preflightBusy) return;
+    if (!selectedFile || preflightBusy || ocrBusy) return;
 
     const restartingReview = preflightResult !== null && preflightResult.nextStartPage === null;
     const startPage = restartingReview ? 1 : (preflightResult?.nextStartPage ?? 1);
     if (restartingReview) {
       setPreflightResult(null);
       setPageReports([]);
+      setOcrNotice("");
+      setOcrProgressText("");
     }
 
     const runId = ++preflightRunRef.current;
@@ -179,6 +199,74 @@ export default function App() {
       if (runId === preflightRunRef.current) {
         setPreflightBusy(false);
         preflightAbortRef.current = null;
+      }
+    }
+  }
+
+  async function runLocalOcr() {
+    if (!selectedFile || ocrBusy || preflightBusy || !classificationSummary?.pagesNeedingOcr.length) return;
+
+    const pagesToOcr = classificationSummary.pagesNeedingOcr.slice(0, MAX_OCR_PAGES_PER_RUN);
+    const runId = ++ocrRunRef.current;
+    const controller = new AbortController();
+    ocrAbortRef.current = controller;
+    setOcrBusy(true);
+    setOcrProgressText("Menyiapkan OCR lokal…");
+    setOcrNotice("");
+    setMessage("");
+
+    const describeProgress = (progress: LocalOcrProgress) => {
+      const pageLabel = progress.pageNumber ? `halaman ${progress.pageNumber}` : "";
+      if (progress.phase === "loading-pdf") {
+        setOcrProgressText("Membuka PDF di perangkat…");
+      } else if (progress.phase === "loading-engine") {
+        setOcrProgressText("Menyiapkan mesin OCR Bahasa Indonesia + Inggris…");
+      } else if (progress.phase === "rendering") {
+        setOcrProgressText(`Merender ${pageLabel} untuk OCR lokal…`);
+      } else {
+        const percent = typeof progress.progress === "number" && progress.progress < 1
+          ? ` ${Math.round(progress.progress * 100)}%`
+          : "";
+        setOcrProgressText(`Mengenali teks ${pageLabel}…${percent}`);
+      }
+    };
+
+    try {
+      const results = await ocrPdfPages(selectedFile, pagesToOcr, {
+        signal: controller.signal,
+        onProgress: describeProgress,
+      });
+      if (runId !== ocrRunRef.current || controller.signal.aborted) return;
+
+      const recognizedPages = new Map(results.map((result) => [result.pageNumber, result]));
+      setPageReports((previous) => previous.map((page) => {
+        const result = recognizedPages.get(page.pageNumber);
+        if (!result) return page;
+        const text = result.text.trim();
+        return {
+          ...page,
+          textChars: text.length,
+          textFound: text.length > 0,
+          ocrAttempted: true,
+          classification: classifyRabDocument(text, { ocrAttempted: true }),
+        };
+      }));
+      setOcrNotice(
+        results.length
+          ? `OCR lokal selesai untuk halaman ${results.map((result) => result.pageNumber).join(", ")}. Teks hanya dipakai untuk klasifikasi di perangkat; tidak dikirim ke server.`
+          : "Tidak ada halaman yang dapat diproses dengan OCR lokal.",
+      );
+      setOcrProgressText("");
+    } catch (error) {
+      if (runId !== ocrRunRef.current || controller.signal.aborted || (error instanceof Error && error.name === "AbortError")) return;
+      setMessage(error instanceof Error
+        ? `OCR lokal gagal: ${error.message}`
+        : "OCR lokal gagal. Coba lagi atau gunakan PDF yang lebih jelas.");
+      setOcrProgressText("");
+    } finally {
+      if (runId === ocrRunRef.current) {
+        setOcrBusy(false);
+        ocrAbortRef.current = null;
       }
     }
   }
@@ -298,7 +386,10 @@ export default function App() {
                     {pageReports.length} dari {preflightResult?.pageCount ?? "?"} halaman diperiksa
                     {classificationSummary.complete ? " · pemeriksaan seluruh halaman selesai" : " · pemeriksaan bertahap"}
                     {classificationSummary.pagesNeedingOcr.length > 0
-                      ? ` · ${classificationSummary.pagesNeedingOcr.length} halaman belum memiliki teks; OCR belum dijalankan`
+                      ? ` · ${classificationSummary.pagesNeedingOcr.length} halaman scan siap untuk OCR lokal`
+                      : ""}
+                    {classificationSummary.pagesUnreadableAfterOcr.length > 0
+                      ? ` · OCR belum menemukan teks pada ${classificationSummary.pagesUnreadableAfterOcr.length} halaman`
                       : ""}
                     {classificationSummary.truncatedPages.length > 0
                       ? ` · teks pada ${classificationSummary.truncatedPages.length} halaman dibatasi untuk menjaga penggunaan memori`
@@ -306,22 +397,40 @@ export default function App() {
                     {" "}File tidak disimpan permanen dan teks lengkap tidak dikirim kembali ke browser.
                   </span>
                 )}
+                {ocrBusy && <span className="preflight-detail" role="status">{ocrProgressText}</span>}
+                {ocrNotice && <span className="preflight-detail">{ocrNotice}</span>}
               </div>
-              <button className="primary-button" type="button" onClick={runPreflight} disabled={preflightBusy}>
+              <button className="primary-button" type="button" onClick={runPreflight} disabled={preflightBusy || ocrBusy}>
                 <span>
                   {preflightBusy
                     ? "Membaca teks…"
-                    : preflightResult?.nextStartPage !== null && preflightResult
-                      ? "Periksa Halaman Berikutnya"
-                      : preflightResult
-                        ? "Ulangi Pemeriksaan"
-                        : "Periksa PDF"}
+                    : ocrBusy
+                      ? "OCR lokal berjalan…"
+                      : preflightResult?.nextStartPage !== null && preflightResult
+                        ? "Periksa Halaman Berikutnya"
+                        : preflightResult
+                          ? "Ulangi Pemeriksaan"
+                          : "Periksa PDF"}
                 </span><ArrowIcon />
               </button>
+              {classificationSummary && classificationSummary.pagesNeedingOcr.length > 0 && (
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={runLocalOcr}
+                  disabled={preflightBusy || ocrBusy}
+                >
+                  {ocrBusy
+                    ? "Menjalankan OCR lokal…"
+                    : `OCR Lokal · Halaman ${classificationSummary.pagesNeedingOcr.slice(0, MAX_OCR_PAGES_PER_RUN).join(", ")}`}
+                </button>
+              )}
               <p className="file-limit">
                 {preflightBusy
-                  ? "Mengekstrak maksimal 5 halaman · Tanpa OCR atau render gambar"
-                  : "Setiap tahap memeriksa maksimal 5 halaman. Pemeriksaan ini belum mengonversi PDF ke Excel."}
+                  ? "Mengekstrak maksimal 5 halaman teks"
+                  : ocrBusy
+                    ? "OCR berjalan di perangkat · halaman scan saja · tanpa unggah gambar"
+                    : "Periksa teks maksimal 5 halaman per tahap. OCR berjalan lokal, maksimal 5 halaman tiap proses."}
               </p>
             </div>
           )}
