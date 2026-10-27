@@ -305,7 +305,7 @@ async function runLocalOcr(){
     const pdf=await pdfTask.promise;
     if(pdf.numPages<1||pdf.numPages>200||targets.some(page=>page>pdf.numPages))throw new Error('Jumlah halaman PDF tidak sesuai batas pemeriksaan.');
     setProgress('Mengunduh mesin OCR dan model bahasa Indonesia + Inggris…');
-    const tess=await import('https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.esm.min.js');
+    const tess=await import('https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/+esm');
     ocrWorker=await tess.createWorker('ind+eng',1,{workerPath:'https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/worker.min.js',logger:(event)=>{
       if(id!==requestId||controller.signal.aborted)return;
       const current=event.progress&&event.progress<1?' '+Math.round(event.progress*100)+'%':'';
