@@ -292,6 +292,30 @@ function headerMap(cells){
   const map={};cells.forEach((cell,index)=>{const v=norm(cell);if(/^(no|nomor|no urut|item)$/.test(v))map.no=index;else if(/uraian|deskripsi|description|jenis pekerjaan|nama pekerjaan/.test(v))map.desc=index;else if(/^(volume|qty|quantity|kuantitas)$/.test(v))map.volume=index;else if(/^(satuan|unit|uom)$/.test(v))map.unit=index;else if(/harga satuan|unit price|tarif satuan/.test(v))map.price=index;else if(/jumlah harga|total harga|amount|total biaya|jumlah biaya/.test(v))map.amount=index});
   return Object.keys(map).filter(key=>key!=='no').length>=2?map:null;
 }
+
+function inferRABRow(cells,itemIndex){
+  const raw=String((cells||[]).join(' ')).replace(/\|/g,' ').replace(/\s+/g,' ').trim();
+  if(!raw||!/[A-Za-zÀ-ÖØ-öø-ÿ]{3,}/.test(raw))return null;
+  const tokens=raw.split(/\s+/),numeric=[];
+  tokens.forEach((token,index)=>{const clean=token.replace(/^[()[\]{}]+|[()[\]{}.,;:]+$/g,'');const value=parseNumber(clean);if(value!==null)numeric.push({index,value,raw:clean})});
+  if(numeric.length<2)return null;
+  const leadingSerial=numeric.length>=3&&numeric[0].index===0&&/^\d{1,4}$/.test(numeric[0].raw)&&tokens.slice(1,numeric[1].index).some(token=>/[A-Za-zÀ-ÖØ-öø-ÿ]{3,}/.test(token));
+  const values=leadingSerial?numeric.slice(1):numeric;
+  if(values.length<2)return null;
+  const volumeToken=values[0],priceToken=values.length>=3?values[1]:null,amountToken=values.length>=3?values[2]:values[1];
+  const descriptionStart=leadingSerial?1:0,description=tokens.slice(descriptionStart,volumeToken.index).join(' ').trim();
+  const unitEnd=priceToken?priceToken.index:amountToken.index;
+  const unit=tokens.slice(volumeToken.index+1,unitEnd).join(' ').replace(/[|,;]+$/g,'').trim();
+  if(!description)return null;
+  return [leadingSerial?numeric[0].value:itemIndex,description,volumeToken.value,unit,priceToken?priceToken.value:'',amountToken.value];
+}
+function lastNumberInLine(cells){
+  const raw=String((cells||[]).join(' ')).replace(/\|/g,' ').replace(/\s+/g,' ').trim();
+  const tokens=raw.split(/\s+/);
+  for(let index=tokens.length-1;index>=0;index--){const clean=tokens[index].replace(/^[()[\]{}]+|[()[\]{}.,;:]+$/g,'');const value=parseNumber(clean);if(value!==null)return value}
+  return '';
+}
+
 function downloadWorkbook(sourceRows,totalPages,scannedPages,fileName){
   const structured=[],source=[['Halaman','Baris','Teks sumber']],headers=['No','Uraian Pekerjaan','Volume','Satuan','Harga Satuan (Rp)','Jumlah Harga (Rp)'];let mapping=null,itemNo=0;
   const rawRows=sourceRows.sort((a,b)=>a.pageNumber-b.pageNumber||a.lineNumber-b.lineNumber);
@@ -300,14 +324,23 @@ function downloadWorkbook(sourceRows,totalPages,scannedPages,fileName){
     const found=headerMap(row.cells);if(found){mapping=found;continue}
     const text=norm(row.cells.join(' '));
     if(/^(grand total|terbilang|dibuat oleh|disetujui oleh|tanggal|halaman)\b/.test(text))continue;
-    if(/^(subtotal|sub total|jumlah akhir|ppn|pajak|pembulatan|total biaya|total harga)\b/.test(text)){const nums=row.cells.map(parseNumber).filter(value=>value!==null);structured.push(['',row.cells.find(value=>/[A-Za-zÀ-ÖØ-öø-ÿ]{3,}/.test(value))||row.cells[0]||'Total','','','',nums.length?nums[nums.length-1]:'']);continue}
-    if(row.cells.length<3||!/[A-Za-zÀ-ÖØ-öø-ÿ]{3,}/.test(row.cells.join(' '))||row.cells.filter(value=>parseNumber(value)!==null).length<1)continue;
-    let no='',desc='',volume='',unit='',price='',amount='';
-    if(mapping){no=mapping.no===undefined?'':row.cells[mapping.no]||'';desc=row.cells[mapping.desc]||'';volume=row.cells[mapping.volume]||'';unit=row.cells[mapping.unit]||'';price=row.cells[mapping.price]||'';amount=row.cells[mapping.amount]||''}
-    else {const offset=row.cells.length>=6&&/^\d{1,4}[.)]?$/.test(row.cells[0])&&/[A-Za-zÀ-ÖØ-öø-ÿ]{3,}/.test(row.cells[1])?1:0;no=offset?row.cells[0]:'';desc=row.cells[offset]||'';volume=row.cells[offset+1]||'';unit=row.cells[offset+2]||'';price=row.cells[offset+3]||'';amount=row.cells[offset+4]||''}
-    if(!desc)desc=row.cells.find(value=>/[A-Za-zÀ-ÖØ-öø-ÿ]{3,}/.test(value)&&parseNumber(value)===null)||row.cells[0]||'';
-    const numberVolume=parseNumber(volume),numberPrice=parseNumber(price),numberAmount=parseNumber(amount);
-    itemNo++;structured.push([parseNumber(no) ?? (no || itemNo),desc,numberVolume ?? volume,unit,numberPrice ?? price,numberAmount ?? amount]);
+    if(/^(subtotal|sub total|jumlah akhir|ppn|pajak|pembulatan|total biaya|total harga)\b/.test(text)){const amount=lastNumberInLine(row.cells);structured.push(['',row.cells.find(value=>/[A-Za-zÀ-ÖØ-öø-ÿ]{3,}/.test(value))||text,'','','',amount]);continue}
+    if(!/[A-Za-zÀ-ÖØ-öø-ÿ]{3,}/.test(row.cells.join(' ')))continue;
+    let inferred=inferRABRow(row.cells,itemNo+1),mapped=null;
+    if(mapping&&mapping.desc!==undefined&&mapping.desc<row.cells.length){
+      const no=mapping.no===undefined?'':row.cells[mapping.no]||'';
+      const desc=row.cells[mapping.desc]||'';
+      const volume=row.cells[mapping.volume]||'';
+      const unit=row.cells[mapping.unit]||'';
+      const price=row.cells[mapping.price]||'';
+      const amount=row.cells[mapping.amount]||'';
+      if(desc&&(volume||price||amount))mapped=[parseNumber(no)??no,desc,parseNumber(volume)??volume,unit,parseNumber(price)??price,parseNumber(amount)??amount];
+    }
+    const selected=mapped||inferred;
+    if(!selected)continue;
+    const [no,desc,volume,unit,price,amount]=selected;
+    const numberVolume=parseNumber(String(volume)),numberPrice=parseNumber(String(price)),numberAmount=parseNumber(String(amount));
+    itemNo++;structured.push([parseNumber(String(no)) ?? (no || itemNo),desc,numberVolume ?? volume,unit,numberPrice ?? price,numberAmount ?? amount]);
   }
   const rab=[headers,...structured];
   const formulas=[];
