@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { PDFDocument } from "pdf-lib";
+import { getDocumentProxy } from "unpdf";
+import { extractPageText } from "../supabase/functions/preflight-rab/pdf-text.js";
+import { classifyRabDocument, summarizeRabPageClassifications } from "../supabase/functions/preflight-rab/rab-classifier.js";
 import { hasPdfHeader, hasPdfTerminator } from "../supabase/functions/preflight-rab/pdf-envelope.js";
 
 const fixtures = [
@@ -41,4 +44,40 @@ test("page-count guardrail distinguishes 201 pages from the 200-page limit", asy
   const parsed = await PDFDocument.load(saved, { updateMetadata: false });
   assert.equal(parsed.getPageCount(), 201);
   assert.ok(parsed.getPageCount() > 200);
+});
+
+test("extracts text one page at a time and classifies RAB evidence from the actual PDF", async () => {
+  const pdfBytes = new Uint8Array(await readFile(new URL("../fixtures/golden/basic-text-rab.pdf", import.meta.url)));
+  const pdf = await getDocumentProxy(pdfBytes, { isEvalSupported: false, maxImageSize: 16_777_216 });
+  const pages = [];
+  try {
+    assert.equal(pdf.numPages, 1);
+    const page = await pdf.getPage(1);
+    try {
+      const extracted = await extractPageText(page);
+      assert.ok(extracted.text.length > 0);
+      assert.match(extracted.text, /PEKERJAAN PERSIAPAN/i);
+      assert.match(extracted.text, /SEMEN PORTLAND/i);
+      assert.match(extracted.text, /PASIR BETON/i);
+      pages.push({
+        pageNumber: 1,
+        textChars: extracted.textChars,
+        textFound: true,
+        truncated: extracted.truncated,
+        classification: classifyRabDocument(extracted.text),
+      });
+    } finally {
+      page.cleanup();
+    }
+    const summary = summarizeRabPageClassifications(pages, { complete: true });
+    assert.ok(["LIKELY_RAB", "NEEDS_CONFIRMATION"].includes(summary.status));
+    assert.equal(summary.pagesReviewed, 1);
+  } finally {
+    await pdf.destroy();
+  }
+});
+
+test("a page with no extracted text is not classified as NOT_RAB", () => {
+  const classification = classifyRabDocument("");
+  assert.equal(classification.status, "NEEDS_OCR");
 });
