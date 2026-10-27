@@ -123,7 +123,8 @@ export function normalizeAiBatch(output, { startPage, pageCount }) {
       ) {
         const expected = item.quantityValue * item.unitPriceValue;
         const difference = item.amountValue - expected;
-        const tolerance = Math.max(1, Math.abs(expected) * 0.005);
+        // RAB amounts are generally rounded to cents/rupiah; never allow a broad percentage tolerance.
+        const tolerance = 1;
         if (Math.abs(difference) <= tolerance) {
           item.lineMathCheck = "MATCH";
         } else {
