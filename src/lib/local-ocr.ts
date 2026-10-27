@@ -22,6 +22,7 @@ export type LocalOcrProgress = {
 export type LocalOcrPageResult = {
   pageNumber: number;
   text: string;
+  truncated: boolean;
 };
 
 type LocalOcrOptions = {
@@ -151,9 +152,11 @@ export async function ocrPdfPages(
         });
         const recognized = await worker.recognize(canvas);
         assertNotAborted();
+        const recognizedText = String(recognized.data.text ?? "").trim();
         results.push({
           pageNumber,
-          text: String(recognized.data.text ?? "").slice(0, MAX_OCR_TEXT_CHARS).trim(),
+          text: recognizedText.slice(0, MAX_OCR_TEXT_CHARS),
+          truncated: recognizedText.length > MAX_OCR_TEXT_CHARS,
         });
       } finally {
         page.cleanup();
