@@ -1,5 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2.118.0";
-import { getDocumentProxy } from "npm:unpdf@1.9.1";
+import { getResolvedPDFJS } from "npm:unpdf@1.9.1";
 import { hasPdfHeader, hasPdfTerminator } from "./pdf-envelope.js";
 import { extractPageText } from "./pdf-text.js";
 import { classifyRabDocument, summarizeRabPageClassifications } from "./rab-classifier.js";
@@ -258,7 +258,8 @@ Deno.serve(async (request: Request) => {
     : Math.max(1, declaredLength);
 
   let pdfParsingStarted = false;
-  let pdf: Awaited<ReturnType<typeof getDocumentProxy>> | null = null;
+  let pdf: { numPages: number; getPage: (pageNumber: number) => Promise<{ cleanup: () => void }> } | null = null;
+  let loadingTask: { promise: Promise<any>; destroy: () => Promise<void> } | null = null;
   try {
     const fingerprint = await makeFingerprint(getClientAddress(request), serviceKey);
     const supabase = createClient(supabaseUrl, serviceKey, {
@@ -318,10 +319,13 @@ Deno.serve(async (request: Request) => {
     // Parse once, then extract only one small page batch. No page rendering, OCR,
     // or persistent file storage. Later batches re-upload the in-memory browser File.
     pdfParsingStarted = true;
-    pdf = await getDocumentProxy(bytes, {
+    const pdfjs = await getResolvedPDFJS();
+    loadingTask = pdfjs.getDocument({
+      data: bytes,
       isEvalSupported: false,
       maxImageSize: 16_777_216,
     });
+    pdf = await loadingTask.promise;
     const pageCount = pdf.numPages;
 
     if (!Number.isSafeInteger(pageCount) || pageCount < 1) {
@@ -438,9 +442,9 @@ Deno.serve(async (request: Request) => {
       origin,
     );
   } finally {
-    if (pdf && typeof pdf.destroy === "function") {
+    if (loadingTask) {
       try {
-        await pdf.destroy();
+        await loadingTask.destroy();
       } catch {
         // All per-page resources are already released; best-effort document teardown.
       }
