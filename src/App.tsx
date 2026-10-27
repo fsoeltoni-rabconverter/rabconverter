@@ -247,6 +247,7 @@ export default function App() {
           ...page,
           textChars: text.length,
           textFound: text.length > 0,
+          truncated: page.truncated || result.truncated,
           ocrAttempted: true,
           classification: classifyRabDocument(text, { ocrAttempted: true }),
         };
