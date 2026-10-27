@@ -2,7 +2,7 @@ export type AiRowType = "section" | "item" | "subtotal" | "tax" | "total" | "not
 
 export interface AiRabRow {
   rowIndex: number;
-  sourcePage: number;
+  sourcePage: number | null;
   rowType: AiRowType;
   itemNumber: string;
   code: string;
