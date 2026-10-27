@@ -32,6 +32,8 @@ jobs:
         run: npm run test:server-pdf
       - name: AI extraction and workbook tests
         run: npm run test:rab-ai-core
+      - name: Preview worker structure tests
+        run: npm run test:preview-worker
       - name: Typecheck
         run: npm run typecheck
       - name: Build
