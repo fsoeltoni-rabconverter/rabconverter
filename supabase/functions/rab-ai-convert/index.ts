@@ -494,6 +494,15 @@ Deno.serve(async (request: Request) => {
     }
 
     allRows.sort((left, right) => left.sourcePage - right.sourcePage || left.rowIndex - right.rowIndex);
+    if (allRows.length === 0) {
+      return errorResponse(
+        "AI_NO_ROWS",
+        "AI tidak menemukan baris tabel yang dapat ditranskripsikan. Workbook tidak dibuat; pastikan PDF berisi RAB/BoQ dan halaman dapat dibaca.",
+        422,
+        origin,
+        { pageCount, pagesReviewed: pageSummaries.length },
+      );
+    }
     const summary = summarizeAiResult(allRows, pageSummaries, stableUnique(warnings));
     return jsonResponse({
       ok: true,
