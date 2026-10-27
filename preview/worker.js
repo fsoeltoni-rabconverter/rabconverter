@@ -61,22 +61,36 @@ const input=document.getElementById('file'),card=document.getElementById('card')
 const PREFLIGHT_URL='https://zkcziucjogprfzhjuaex.supabase.co/functions/v1/preflight-rab';
 const MAX_BYTES=30*1024*1024;
 let selectedFile=null,pickerOpen=false,requestId=0,activeController=null,busy=false;
+let pageReports=[],lastPreflightResult=null,nextStartPage=1;
 input.addEventListener('cancel',()=>{pickerOpen=false});
 function showError(message){err.textContent=message;err.hidden=false}
+function updateNote(message,success=false){
+  if(!note)return;
+  note.classList.toggle('is-success',success);
+  const dot=note.querySelector('.dot');
+  note.textContent='';
+  if(dot)note.append(dot);
+  note.append(document.createTextNode(message));
+}
+function setPreflightLabel(label){
+  if(preflight.firstChild)preflight.firstChild.textContent=label+' ';
+}
 function resetFile(){
   requestId+=1;
   activeController?.abort();
   activeController=null;
   busy=false;
   selectedFile=null;
+  pageReports=[];
+  lastPreflightResult=null;
+  nextStartPage=1;
   chosen.hidden=true;
   empty.hidden=false;
   err.hidden=true;
   preflight.disabled=false;
-  preflight.querySelector('span').textContent='→';
-  note.classList.remove('is-success');
-  note.textContent='Pemeriksaan struktur saja; belum membaca tabel RAB atau menjalankan OCR.';
-  help.textContent='File dikirim untuk diperiksa, lalu langsung dibuang.';
+  setPreflightLabel('Periksa PDF');
+  updateNote('Pemeriksaan struktur dan teks PDF berjalan bertahap. OCR belum dijalankan.');
+  help.textContent='File hanya dipakai sementara dan tidak disimpan permanen.';
 }
 async function showFile(file){
   if(!file)return;
@@ -107,29 +121,102 @@ async function showFile(file){
   document.getElementById('filesize').textContent=(file.size<1048576?Math.max(1,Math.round(file.size/1024))+' KB':(file.size/1048576).toFixed(1)+' MiB')+' · PDF';
   empty.hidden=true;chosen.hidden=false;
 }
+async function showFile(file){
+  if(!file)return;
+  const validationId=++requestId;
+  activeController?.abort();
+  activeController=null;
+  busy=false;
+  selectedFile=null;
+  pageReports=[];
+  lastPreflightResult=null;
+  nextStartPage=1;
+  err.hidden=true;
+  updateNote('Pemeriksaan struktur dan teks PDF berjalan bertahap. OCR belum dijalankan.');
+  preflight.disabled=false;
+  setPreflightLabel('Periksa PDF');
+  if(file.size===0){resetFile();showError('File kosong. Coba pilih PDF lain.');return}
+  if(file.size>MAX_BYTES){resetFile();showError('Ukuran file maksimum adalah 30 MiB.');return}
+  try{
+    const bytes=new Uint8Array(await file.slice(0,1024).arrayBuffer());
+    if(validationId!==requestId)return;
+    if(!new TextDecoder('latin1').decode(bytes).includes('%PDF-')){
+      resetFile();showError('File tidak memiliki header PDF yang valid. Pilih PDF asli.');return;
+    }
+  }catch{
+    if(validationId!==requestId)return;
+    resetFile();showError('File tidak dapat dibaca oleh browser. Coba pilih ulang.');return;
+  }
+  if(validationId!==requestId)return;
+  selectedFile=file;
+  document.getElementById('filename').textContent=file.name;
+  document.getElementById('filesize').textContent=(file.size<1048576?Math.max(1,Math.round(file.size/1024))+' KB':(file.size/1048576).toFixed(1)+' MiB')+' · PDF';
+  empty.hidden=true;chosen.hidden=false;
+}
+const SIGNAL_SCORES={rab_title:3,item_description:2,quantity_or_unit:2,price_or_amount:2,construction_terms:1,totals:1,repeated_item_rows:2};
+function summarizePageReports(pages,complete){
+  const signals=[...new Set(pages.flatMap(page=>page.classification?.signals||[]))];
+  const score=signals.reduce((sum,key)=>sum+(SIGNAL_SCORES[key]||0),0);
+  const pagesNeedingOcr=pages.filter(page=>page.textFound===false||page.textChars===0).map(page=>page.pageNumber);
+  const truncatedPages=pages.filter(page=>page.truncated).map(page=>page.pageNumber);
+  const description=signals.includes('item_description'),quantity=signals.includes('quantity_or_unit'),price=signals.includes('price_or_amount'),totals=signals.includes('totals');
+  const structural=signals.includes('repeated_item_rows')||(description&&quantity&&price)||(description&&price&&totals);
+  let status,reasons;
+  if(score>=6&&signals.length>=2&&structural){status='LIKELY_RAB';reasons=['rab_signals_and_cost_structure_detected']}
+  else if(score>=3){status='NEEDS_CONFIRMATION';reasons=[structural?'classification_score_needs_confirmation':'cost_structure_not_strong_enough_for_auto_accept']}
+  else if(pagesNeedingOcr.length>0&&complete){status='NEEDS_OCR';reasons=['one_or_more_pages_have_no_extractable_text']}
+  else if(!complete){status='NEEDS_MORE_PAGES';reasons=['insufficient_evidence_in_pages_reviewed_so_far']}
+  else{status='NOT_RAB';reasons=['insufficient_rab_boq_evidence']}
+  return {status,score,signals,reasons,complete,pagesReviewed:pages.length,pagesNeedingOcr,truncatedPages,structuralCostEvidence:structural};
+}
+function classificationLabel(summary){
+  if(summary.status==='LIKELY_RAB')return summary.complete?'Kemungkinan besar RAB/BoQ':'Sementara terlihat seperti RAB/BoQ';
+  if(summary.status==='NEEDS_CONFIRMATION')return 'Belum pasti RAB/BoQ — perlu konfirmasi';
+  if(summary.status==='NOT_RAB')return 'Tidak ditemukan cukup ciri RAB/BoQ';
+  if(summary.status==='NEEDS_OCR')return 'Ada halaman yang memerlukan OCR';
+  return 'Bukti belum cukup — periksa halaman berikutnya';
+}
 async function runPreflight(){
   if(!selectedFile||busy)return;
+  const restarting=lastPreflightResult&&lastPreflightResult.nextStartPage===null;
+  const startPage=restarting?1:nextStartPage;
+  if(restarting){pageReports=[];lastPreflightResult=null;nextStartPage=1}
   busy=true;
   const id=++requestId;
   const controller=new AbortController();
   activeController=controller;
   preflight.disabled=true;
-  preflight.querySelector('span').textContent='…';
-  note.classList.remove('is-success');
-  note.textContent='Memeriksa struktur PDF di server. OCR tidak dijalankan.';
-  help.textContent='File hanya dipakai selama pemeriksaan dan tidak disimpan permanen.';
+  setPreflightLabel('Membaca teks…');
+  updateNote('Mengekstrak teks PDF secara bertahap. OCR dan render gambar tidak dijalankan.');
+  help.textContent='Maksimal 5 halaman per permintaan. PDF tidak disimpan permanen.';
   err.hidden=true;
   try{
-    const response=await fetch(PREFLIGHT_URL,{method:'POST',headers:{'Content-Type':'application/pdf'},body:selectedFile,signal:controller.signal});
+    const response=await fetch(PREFLIGHT_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/pdf','x-preflight-start-page':String(startPage)},
+      body:selectedFile,
+      signal:controller.signal
+    });
     const payload=await response.json().catch(()=>null);
     if(id!==requestId)return;
-    if(!response.ok||!payload||payload.ok!==true||typeof payload.pageCount!=='number'){
+    if(!response.ok||!payload||payload.ok!==true||typeof payload.pageCount!=='number'||!Array.isArray(payload.pageResults)||!(payload.nextStartPage===null||typeof payload.nextStartPage==='number')){
       showError(payload?.message||'Pemeriksaan PDF gagal. Coba lagi nanti.');
       return;
     }
-    note.classList.add('is-success');
-    note.textContent='Struktur PDF valid · '+payload.pageCount+' halaman. Isi dokumen belum diklasifikasikan sebagai RAB/BoQ.';
-    help.textContent='Pemeriksaan struktur selesai. PDF tidak disimpan dan OCR belum dijalankan.';
+    const reports=new Map(pageReports.map(page=>[page.pageNumber,page]));
+    for(const page of payload.pageResults)reports.set(page.pageNumber,page);
+    pageReports=[...reports.values()].sort((a,b)=>a.pageNumber-b.pageNumber);
+    lastPreflightResult=payload;
+    nextStartPage=payload.nextStartPage??1;
+    const complete=payload.nextStartPage===null&&pageReports.length===payload.pageCount;
+    const summary=summarizePageReports(pageReports,complete);
+    updateNote(classificationLabel(summary),summary.status==='LIKELY_RAB');
+    let details=pageReports.length+' dari '+payload.pageCount+' halaman diperiksa';
+    details+=complete?' · pemeriksaan seluruh halaman selesai':' · pemeriksaan bertahap';
+    if(summary.pagesNeedingOcr.length)details+=' · '+summary.pagesNeedingOcr.length+' halaman tidak memiliki teks; perlu OCR';
+    if(summary.truncatedPages.length)details+=' · teks dibatasi pada '+summary.truncatedPages.length+' halaman';
+    help.textContent=details+'. File tidak disimpan dan teks lengkap tidak dikirim ke browser.';
+    setPreflightLabel(payload.nextStartPage===null?'Ulangi Pemeriksaan':'Periksa Halaman Berikutnya');
   }catch(error){
     if(id!==requestId||(error&&error.name==='AbortError'))return;
     showError('Tidak dapat menghubungi pemeriksaan server. Periksa koneksi lalu coba lagi.');
@@ -138,7 +225,9 @@ async function runPreflight(){
       busy=false;
       activeController=null;
       preflight.disabled=false;
-      preflight.querySelector('span').textContent='→';
+      if(!lastPreflightResult)setPreflightLabel('Periksa PDF');
+      else if(lastPreflightResult.nextStartPage===null)setPreflightLabel('Ulangi Pemeriksaan');
+      else setPreflightLabel('Periksa Halaman Berikutnya');
     }
   }
 }

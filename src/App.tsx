@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from "react";
-import { validatePdfFile } from "./lib/preflight.js";
+import { summarizeRabPageClassifications, validatePdfFile, type RabPageTextResult } from "./lib/preflight.js";
 
 const PREFLIGHT_ENDPOINT = import.meta.env.VITE_PREFLIGHT_URL?.trim()
   || "https://zkcziucjogprfzhjuaex.supabase.co/functions/v1/preflight-rab";
@@ -7,6 +7,15 @@ const PREFLIGHT_ENDPOINT = import.meta.env.VITE_PREFLIGHT_URL?.trim()
 type ServerPreflightResult = {
   pageCount: number;
   sizeBytes: number;
+  pagesReviewed: {
+    start: number;
+    end: number;
+    count: number;
+    total: number;
+    complete: boolean;
+  };
+  nextStartPage: number | null;
+  pageResults: RabPageTextResult[];
 };
 
 function formatBytes(bytes: number): string {
@@ -43,6 +52,8 @@ export default function App() {
   const preflightAbortRef = useRef<AbortController | null>(null);
   const [preflightBusy, setPreflightBusy] = useState(false);
   const [preflightResult, setPreflightResult] = useState<ServerPreflightResult | null>(null);
+  const [pageReports, setPageReports] = useState<RabPageTextResult[]>([]);
+  const [reviewStartPage, setReviewStartPage] = useState(1);
 
   useEffect(() => {
     const input = inputRef.current;
@@ -66,6 +77,8 @@ export default function App() {
     preflightAbortRef.current = null;
     setPreflightBusy(false);
     setPreflightResult(null);
+    setPageReports([]);
+    setReviewStartPage(1);
     setMessage("");
 
     const validation = await validatePdfFile(file);
@@ -88,33 +101,61 @@ export default function App() {
     setSelectedFile(null);
     setPreflightBusy(false);
     setPreflightResult(null);
+    setPageReports([]);
+    setReviewStartPage(1);
     setMessage("");
   }
 
   async function runPreflight() {
     if (!selectedFile || preflightBusy) return;
 
+    const restartingReview = preflightResult !== null && preflightResult.nextStartPage === null;
+    const startPage = restartingReview ? 1 : (preflightResult?.nextStartPage ?? 1);
+    if (restartingReview) {
+      setPreflightResult(null);
+      setPageReports([]);
+    }
+
     const runId = ++preflightRunRef.current;
     const controller = new AbortController();
     preflightAbortRef.current = controller;
+    setReviewStartPage(startPage);
     setPreflightBusy(true);
-    setPreflightResult(null);
     setMessage("");
 
     try {
       const response = await fetch(PREFLIGHT_ENDPOINT, {
         method: "POST",
-        headers: { "Content-Type": "application/pdf" },
+        headers: {
+          "Content-Type": "application/pdf",
+          "x-preflight-start-page": String(startPage),
+        },
         body: selectedFile,
         signal: controller.signal,
       });
 
       const payload = await response.json().catch(() => null) as
-        | { ok?: boolean; pageCount?: number; sizeBytes?: number; code?: string; message?: string }
+        | {
+            ok?: boolean;
+            pageCount?: number;
+            sizeBytes?: number;
+            pagesReviewed?: ServerPreflightResult["pagesReviewed"];
+            nextStartPage?: number | null;
+            pageResults?: RabPageTextResult[];
+            code?: string;
+            message?: string;
+          }
         | null;
 
       if (runId !== preflightRunRef.current) return;
-      if (!response.ok || !payload?.ok || typeof payload.pageCount !== "number") {
+      if (
+        !response.ok ||
+        !payload?.ok ||
+        typeof payload.pageCount !== "number" ||
+        !payload.pagesReviewed ||
+        !Array.isArray(payload.pageResults) ||
+        !(payload.nextStartPage === null || typeof payload.nextStartPage === "number")
+      ) {
         setMessage(payload?.message || "Pemeriksaan PDF gagal. Coba lagi dengan file yang berbeda.");
         return;
       }
@@ -122,6 +163,14 @@ export default function App() {
       setPreflightResult({
         pageCount: payload.pageCount,
         sizeBytes: typeof payload.sizeBytes === "number" ? payload.sizeBytes : selectedFile.size,
+        pagesReviewed: payload.pagesReviewed,
+        nextStartPage: payload.nextStartPage,
+        pageResults: payload.pageResults,
+      });
+      setPageReports((previous) => {
+        const reports = new Map(previous.map((page) => [page.pageNumber, page]));
+        for (const page of payload.pageResults ?? []) reports.set(page.pageNumber, page);
+        return [...reports.values()].sort((left, right) => left.pageNumber - right.pageNumber);
       });
     } catch (error) {
       if (runId !== preflightRunRef.current || (error instanceof Error && error.name === "AbortError")) return;
@@ -156,6 +205,31 @@ export default function App() {
     setDragging(false);
     validateAndSetFile(event.dataTransfer.files?.[0]);
   }
+
+  const reviewComplete = Boolean(
+    preflightResult?.pagesReviewed.complete &&
+    preflightResult.pageCount === pageReports.length,
+  );
+  const classificationSummary = pageReports.length > 0
+    ? summarizeRabPageClassifications(pageReports, { complete: reviewComplete })
+    : null;
+  const classificationLabel = (() => {
+    if (!classificationSummary) return "";
+    switch (classificationSummary.status) {
+      case "LIKELY_RAB":
+        return reviewComplete ? "Kemungkinan besar RAB/BoQ" : "Sementara terlihat seperti RAB/BoQ";
+      case "NEEDS_CONFIRMATION":
+        return "Belum pasti RAB/BoQ — perlu konfirmasi";
+      case "NOT_RAB":
+        return "Tidak ditemukan cukup ciri RAB/BoQ";
+      case "NEEDS_OCR":
+        return "Ada halaman yang memerlukan OCR";
+      case "UNREADABLE_PDF":
+        return "Teks PDF belum dapat dibaca";
+      default:
+        return "Bukti belum cukup — periksa halaman berikutnya";
+    }
+  })();
 
   return (
     <div className="app-shell">
@@ -212,24 +286,42 @@ export default function App() {
                 <span>{formatBytes(selectedFile.size)} · PDF</span>
               </div>
               <button className="remove-file" type="button" onClick={removeSelectedFile} aria-label="Hapus pilihan file">×</button>
-              <div className={`preflight-panel ${preflightResult ? "is-success" : ""}`} aria-live="polite">
+              <div className={`preflight-panel ${classificationSummary?.status === "LIKELY_RAB" ? "is-success" : ""}`} aria-live="polite">
                 <span className="notice-dot" />
                 {preflightBusy
-                  ? "Memeriksa struktur PDF di server…"
-                  : preflightResult
-                    ? `Struktur PDF valid · ${preflightResult.pageCount} halaman`
-                    : "Pemeriksaan struktur saja; belum membaca tabel RAB atau menjalankan OCR."}
-                {preflightResult && (
+                  ? `Membaca teks halaman ${reviewStartPage}–${Math.min(reviewStartPage + 4, preflightResult?.pageCount ?? 200)}…`
+                  : classificationSummary
+                    ? classificationLabel
+                    : "Periksa struktur dan teks PDF untuk melihat apakah isinya menyerupai RAB/BoQ."}
+                {classificationSummary && (
                   <span className="preflight-detail">
-                    File terbaca dan tidak disimpan permanen. Isi dokumen belum diklasifikasikan sebagai RAB/BoQ.
+                    {pageReports.length} dari {preflightResult?.pageCount ?? "?"} halaman diperiksa
+                    {classificationSummary.complete ? " · pemeriksaan seluruh halaman selesai" : " · pemeriksaan bertahap"}
+                    {classificationSummary.pagesNeedingOcr.length > 0
+                      ? ` · ${classificationSummary.pagesNeedingOcr.length} halaman belum memiliki teks; OCR belum dijalankan`
+                      : ""}
+                    {classificationSummary.truncatedPages.length > 0
+                      ? ` · teks pada ${classificationSummary.truncatedPages.length} halaman dibatasi untuk menjaga penggunaan memori`
+                      : ""}
+                    {" "}File tidak disimpan permanen dan teks lengkap tidak dikirim kembali ke browser.
                   </span>
                 )}
               </div>
               <button className="primary-button" type="button" onClick={runPreflight} disabled={preflightBusy}>
-                <span>{preflightBusy ? "Memeriksa PDF…" : preflightResult ? "Periksa Ulang PDF" : "Periksa PDF"}</span><ArrowIcon />
+                <span>
+                  {preflightBusy
+                    ? "Membaca teks…"
+                    : preflightResult?.nextStartPage !== null && preflightResult
+                      ? "Periksa Halaman Berikutnya"
+                      : preflightResult
+                        ? "Ulangi Pemeriksaan"
+                        : "Periksa PDF"}
+                </span><ArrowIcon />
               </button>
               <p className="file-limit">
-                {preflightBusy ? "Pemrosesan sementara · Tanpa OCR" : "PDF dikirim untuk diperiksa, lalu langsung dibuang."}
+                {preflightBusy
+                  ? "Mengekstrak maksimal 5 halaman · Tanpa OCR atau render gambar"
+                  : "Setiap tahap memeriksa maksimal 5 halaman. Pemeriksaan ini belum mengonversi PDF ke Excel."}
               </p>
             </div>
           )}

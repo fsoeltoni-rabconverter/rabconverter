@@ -6,7 +6,7 @@ Status: implementation contract for the first upload-validation slice.
 
 Preflight decides whether an uploaded file is eligible to enter conversion. It is not the conversion engine and must not claim that a PDF has been fully parsed or that a document is a RAB solely from its filename or browser MIME type.
 
-The current preview UI does not upload files to a server. Client validation is an early feedback layer only. The server must repeat authoritative checks before processing or calling a paid provider.
+The preview uploads a selected PDF directly to the preflight Edge Function only after the user starts a check. The server holds it in request memory and does not write it to persistent storage. Client checks are early feedback only; server checks remain authoritative.
 
 ## Limits
 
@@ -114,4 +114,4 @@ The classifier's statuses are typed results, while error codes represent validat
 
 ## Scope boundaries
 
-This slice implements browser header/size validation, an extracted-text classifier for a later stage, and a server endpoint that parses PDF structure and counts pages without rendering pages or running OCR. The original PDF is sent directly to the endpoint, held only in request memory, and not written to persistent storage. The endpoint is public for the preview only, with exact-origin CORS plus a database-backed per-client cap of 10 requests and 120 MiB per 15-minute window; CORS is not treated as authentication. Text extraction/OCR, RAB classification during upload, credit checks, storage, and conversion remain out of scope.
+Stage 1 implements browser header/size validation and server-side PDF structure/page-count checks. Stage 2 adds progressive text extraction and deterministic RAB/BoQ classification in batches of at most five pages. Both stages avoid persistent PDF storage and do not render pages or run OCR. The anonymous preview endpoint has exact-origin CORS and a database-backed per-client request/byte budget; CORS is not treated as authentication. OCR, credit checks, XLSX generation, and conversion remain out of scope.

@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { PDFDocument } from "pdf-lib";
+import { getResolvedPDFJS } from "unpdf";
+import { extractPageText } from "../supabase/functions/preflight-rab/pdf-text.js";
+import { classifyRabDocument, summarizeRabPageClassifications } from "../supabase/functions/preflight-rab/rab-classifier.js";
 import { hasPdfHeader, hasPdfTerminator } from "../supabase/functions/preflight-rab/pdf-envelope.js";
 
 const fixtures = [
@@ -41,4 +44,71 @@ test("page-count guardrail distinguishes 201 pages from the 200-page limit", asy
   const parsed = await PDFDocument.load(saved, { updateMetadata: false });
   assert.equal(parsed.getPageCount(), 201);
   assert.ok(parsed.getPageCount() > 200);
+});
+
+for (const fixtureId of fixtures) {
+  test(`extracts text in page order: ${fixtureId}`, async () => {
+    const pdfBytes = new Uint8Array(
+      await readFile(new URL(`../fixtures/golden/${fixtureId}.pdf`, import.meta.url)),
+    );
+    const expected = JSON.parse(
+      await readFile(new URL(`../fixtures/golden/expected/${fixtureId}.json`, import.meta.url), "utf8"),
+    );
+    const pdfjs = await getResolvedPDFJS();
+    const loadingTask = pdfjs.getDocument({
+      data: pdfBytes,
+      isEvalSupported: false,
+      maxImageSize: 16_777_216,
+    });
+    const pdf = await loadingTask.promise;
+    const pages = [];
+    const extractedPages = [];
+
+    try {
+      assert.equal(pdf.numPages, expected.pages);
+      for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+        const page = await pdf.getPage(pageNumber);
+        try {
+          const extracted = await extractPageText(page);
+          extractedPages.push(extracted.text);
+          pages.push({
+            pageNumber,
+            textChars: extracted.textChars,
+            textFound: extracted.text.length > 0,
+            truncated: extracted.truncated,
+            classification: classifyRabDocument(extracted.text),
+          });
+        } finally {
+          page.cleanup();
+        }
+      }
+
+      const allText = extractedPages.join("\\n");
+      assert.ok(allText.length > 0, "text-based golden fixture should yield text");
+      if (fixtureId === "basic-text-rab") {
+        assert.match(allText, /PEKERJAAN PERSIAPAN/i);
+        assert.match(allText, /SEMEN PORTLAND/i);
+        assert.match(allText, /PASIR BETON/i);
+      } else if (fixtureId === "wrapped-and-indonesian-numbers") {
+        assert.match(allText, /PEKERJAAN TANAH/i);
+        assert.match(allText, /BATU BATA/i);
+      } else if (fixtureId === "multi-page-continuation") {
+        assert.match(allText, /BETON K-250/i);
+        assert.match(allText, /BEKISTING/i);
+      } else if (fixtureId === "ambiguous-and-nonbillable") {
+        assert.match(allText, /CAT TEMBOK/i);
+      }
+
+      const summary = summarizeRabPageClassifications(pages, { complete: true });
+      assert.equal(summary.complete, true);
+      assert.equal(summary.pagesReviewed, expected.pages);
+    } finally {
+      await loadingTask.destroy();
+    }
+  });
+}
+
+test("a page with no extracted text is not classified as NOT_RAB", () => {
+  const classification = classifyRabDocument("");
+  assert.equal(classification.status, "NEEDS_OCR");
 });

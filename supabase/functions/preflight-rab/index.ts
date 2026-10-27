@@ -1,6 +1,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2.118.0";
-import { PDFDocument } from "npm:pdf-lib@1.17.1";
+import { getResolvedPDFJS } from "npm:unpdf@1.9.1";
 import { hasPdfHeader, hasPdfTerminator } from "./pdf-envelope.js";
+import { extractPageText } from "./pdf-text.js";
+import { classifyRabDocument, summarizeRabPageClassifications } from "./rab-classifier.js";
 
 const MAX_FILE_SIZE_BYTES = 30 * 1024 * 1024;
 const MAX_PDF_PAGES = 200;
@@ -25,7 +27,8 @@ type ErrorCode =
   | "PDF_CORRUPT"
   | "TOO_MANY_PAGES"
   | "PREFLIGHT_TEMPORARY_FAILURE"
-  | "RATE_LIMITED";
+  | "RATE_LIMITED"
+  | "INVALID_PAGE_RANGE";
 
 function getSecretKey(): string {
   const rawKeys = Deno.env.get("SUPABASE_SECRET_KEYS");
@@ -58,7 +61,7 @@ function jsonResponse(
       "x-content-type-options": "nosniff",
       "access-control-allow-origin": origin,
       "access-control-allow-methods": "POST, GET, OPTIONS",
-      "access-control-allow-headers": "content-type",
+      "access-control-allow-headers": "content-type, x-preflight-start-page",
       "access-control-max-age": "600",
       "vary": "Origin",
     },
@@ -148,8 +151,11 @@ async function readBoundedBody(request: Request, maxBytes: number): Promise<Uint
 }
 
 function isEncryptedPdfError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message.toLowerCase() : "";
-  return message.includes("encrypt") || message.includes("password");
+  if (!(error instanceof Error)) return false;
+  const message = error.message.toLowerCase();
+  return error.name === "PasswordException" ||
+    message.includes("encrypt") ||
+    message.includes("password");
 }
 
 Deno.serve(async (request: Request) => {
@@ -176,7 +182,7 @@ Deno.serve(async (request: Request) => {
       headers: {
         "access-control-allow-origin": origin,
         "access-control-allow-methods": "POST, GET, OPTIONS",
-        "access-control-allow-headers": "content-type",
+        "access-control-allow-headers": "content-type, x-preflight-start-page",
         "access-control-max-age": "600",
         "vary": "Origin",
       },
@@ -187,12 +193,14 @@ Deno.serve(async (request: Request) => {
     return jsonResponse({
       ok: true,
       service: "preflight-rab",
-      mode: "structure-only",
+      mode: "progressive-text-extraction",
       maxFileSizeBytes: MAX_FILE_SIZE_BYTES,
       maxPages: MAX_PDF_PAGES,
+      pagesPerRequest: 5,
       storesUploadedPdf: false,
+      returnsExtractedText: false,
       performsOcr: false,
-      performsRabClassification: false,
+      performsRabClassification: true,
     }, 200, origin);
   }
 
@@ -219,6 +227,22 @@ Deno.serve(async (request: Request) => {
     });
   }
 
+  const requestedStartHeader = request.headers.get("x-preflight-start-page");
+  const requestedStartPage = requestedStartHeader === null ? 1 : Number(requestedStartHeader);
+  if (
+    !Number.isSafeInteger(requestedStartPage) ||
+    requestedStartPage < 1 ||
+    requestedStartPage > MAX_PDF_PAGES ||
+    (requestedStartHeader !== null && !/^\d+$/.test(requestedStartHeader))
+  ) {
+    return errorResponse(
+      "INVALID_PAGE_RANGE",
+      "Nomor halaman pemeriksaan tidak valid. Mulai dari halaman 1 hingga 200.",
+      400,
+      origin,
+    );
+  }
+
   let serviceKey: string;
   let supabaseUrl: string;
   try {
@@ -236,6 +260,8 @@ Deno.serve(async (request: Request) => {
     : Math.max(1, declaredLength);
 
   let pdfParsingStarted = false;
+  let pdf: { numPages: number; getPage: (pageNumber: number) => Promise<{ cleanup: () => void }> } | null = null;
+  let loadingTask: { promise: Promise<any>; destroy: () => Promise<void> } | null = null;
   try {
     const fingerprint = await makeFingerprint(getClientAddress(request), serviceKey);
     const supabase = createClient(supabaseUrl, serviceKey, {
@@ -292,12 +318,19 @@ Deno.serve(async (request: Request) => {
       return errorResponse("PDF_CORRUPT", "PDF tidak memiliki penanda akhir dokumen yang valid.", 422, origin);
     }
 
-    // Parse document structure only: no page rendering, text extraction, OCR, or file persistence.
+    // Parse once, then extract only one small page batch. No page rendering, OCR,
+    // or persistent file storage. Later batches re-upload the in-memory browser File.
     pdfParsingStarted = true;
-    const pdf = await PDFDocument.load(bytes, { updateMetadata: false });
-    const pageCount = pdf.getPageCount();
+    const pdfjs = await getResolvedPDFJS();
+    loadingTask = pdfjs.getDocument({
+      data: bytes,
+      isEvalSupported: false,
+      maxImageSize: 16_777_216,
+    });
+    pdf = await loadingTask.promise;
+    const pageCount = pdf.numPages;
 
-    if (pageCount < 1) {
+    if (!Number.isSafeInteger(pageCount) || pageCount < 1) {
       return errorResponse("PDF_CORRUPT", "PDF tidak memiliki halaman yang dapat dibaca.", 422, origin);
     }
     if (pageCount > MAX_PDF_PAGES) {
@@ -309,36 +342,83 @@ Deno.serve(async (request: Request) => {
         { pageCount, maxPages: MAX_PDF_PAGES },
       );
     }
+    if (requestedStartPage > pageCount) {
+      return errorResponse(
+        "INVALID_PAGE_RANGE",
+        `Halaman ${requestedStartPage} tidak ada di PDF ini yang hanya memiliki ${pageCount} halaman.`,
+        400,
+        origin,
+      );
+    }
+
+    const batchSize = 5;
+    const endPage = Math.min(pageCount, requestedStartPage + batchSize - 1);
+    const pageResults: Array<{
+      pageNumber: number;
+      textChars: number;
+      textFound: boolean;
+      truncated: boolean;
+      classification: ReturnType<typeof classifyRabDocument>;
+    }> = [];
+
+    for (let pageNumber = requestedStartPage; pageNumber <= endPage; pageNumber += 1) {
+      const page = await pdf.getPage(pageNumber);
+      let extracted: Awaited<ReturnType<typeof extractPageText>>;
+      try {
+        extracted = await extractPageText(page);
+      } finally {
+        page.cleanup();
+      }
+
+      const pageClassification = classifyRabDocument(extracted.text);
+      pageResults.push({
+        pageNumber,
+        textChars: extracted.textChars,
+        textFound: extracted.text.length > 0,
+        truncated: extracted.truncated,
+        classification: pageClassification,
+      });
+    }
+
+    const complete = endPage === pageCount;
+    const classification = summarizeRabPageClassifications(pageResults, { complete });
 
     return jsonResponse({
       ok: true,
-      status: "PDF_VALID",
+      status: "PDF_TEXT_REVIEWED",
       pageCount,
       sizeBytes: bytes.byteLength,
+      pagesReviewed: {
+        start: requestedStartPage,
+        end: endPage,
+        count: pageResults.length,
+        total: pageCount,
+        complete,
+      },
+      nextStartPage: complete ? null : endPage + 1,
+      pageResults,
+      classification,
       checks: {
         pdfHeader: "passed",
         pdfStructure: "passed",
         pageCount: "passed",
-        passwordProtected: false,
       },
       processing: {
-        mode: "structure-only",
+        mode: "progressive-text-extraction",
+        pagesPerRequest: batchSize,
         ocr: "not-run",
-        rabClassification: "not-run",
         persistentStorage: false,
+        extractedTextReturnedToClient: false,
       },
-      message: "PDF dapat dibaca. Tahap ini belum menentukan apakah isinya RAB/BoQ.",
+      message: complete
+        ? "Pemeriksaan teks seluruh halaman selesai. Dokumen yang berisi halaman scan tetap memerlukan OCR."
+        : `Teks halaman ${requestedStartPage}–${endPage} sudah diperiksa. Lanjutkan untuk memeriksa halaman berikutnya.`,
     }, 200, origin);
   } catch (error) {
     if (error instanceof Error && error.name === "PayloadTooLargeError") {
       return errorResponse("FILE_TOO_LARGE", "Ukuran file maksimum adalah 30 MiB.", 413, origin, {
         maxFileSizeBytes: MAX_FILE_SIZE_BYTES,
       });
-    }
-
-    if (!pdfParsingStarted) {
-      console.error("preflight dependency failed");
-      return errorResponse("PREFLIGHT_TEMPORARY_FAILURE", "Layanan pemeriksaan sedang bermasalah. Coba lagi nanti.", 503, origin);
     }
 
     if (isEncryptedPdfError(error)) {
@@ -350,6 +430,11 @@ Deno.serve(async (request: Request) => {
       );
     }
 
+    if (!pdfParsingStarted) {
+      console.error("preflight dependency failed");
+      return errorResponse("PREFLIGHT_TEMPORARY_FAILURE", "Layanan pemeriksaan sedang bermasalah. Coba lagi nanti.", 503, origin);
+    }
+
     // Do not return or log parser internals because they may include untrusted file details.
     console.error("preflight parse failed");
     return errorResponse(
@@ -358,5 +443,13 @@ Deno.serve(async (request: Request) => {
       422,
       origin,
     );
+  } finally {
+    if (loadingTask) {
+      try {
+        await loadingTask.destroy();
+      } catch {
+        // All per-page resources are already released; best-effort document teardown.
+      }
+    }
   }
 });
