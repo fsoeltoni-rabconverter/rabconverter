@@ -158,7 +158,7 @@ function bytesToBase64(bytes: Uint8Array) {
   return btoa(binary);
 }
 
-function previousContext(rows: Array<{ rowType: string; description: string; code: string; itemNumber: string }>, existing: string) {
+function buildPreviousContext(rows: Array<{ rowType: string; description: string; code: string; itemNumber: string }>, existing: string) {
   const sectionTrail = rows.filter((row) => row.rowType === "section" && row.description).slice(-8).map((row) => row.description);
   const items = rows.filter((row) => row.rowType === "item" && row.description).slice(-3).map((row) => `${row.itemNumber ? row.itemNumber + " " : ""}${row.description}`);
   return [
@@ -485,7 +485,7 @@ Deno.serve(async (request: Request) => {
       allRows.push(...batch.rows);
       pageSummaries.push(...batch.pageSummaries);
       warnings.push(...batch.warnings);
-      previousContext = previousContext(batch.rows, previousContext);
+      previousContext = buildPreviousContext(batch.rows, previousContext);
     }
 
     allRows.sort((left, right) => left.sourcePage - right.sourcePage || left.rowIndex - right.rowIndex);
