@@ -13,7 +13,8 @@
     "test:preflight": "node --test scripts/test-preflight.mjs",
     "preview": "vite preview --host 0.0.0.0",
     "test:server-pdf": "node --test scripts/test-server-pdf-parser.mjs",
-    "test:rab-ai-core": "node --test scripts/test-rab-ai-core.mjs scripts/test-ai-workbook.mjs"
+    "test:rab-ai-core": "node --test scripts/test-rab-ai-core.mjs scripts/test-ai-workbook.mjs",
+    "test:preview-worker": "node --test scripts/test-preview-worker.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.118.0",
