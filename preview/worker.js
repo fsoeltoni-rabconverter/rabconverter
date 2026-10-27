@@ -62,7 +62,7 @@ footer{border-top:1px solid rgba(215,224,217,.72);display:flex;justify-content:s
 const input=document.getElementById('file'),card=document.getElementById('card'),empty=document.getElementById('empty'),chosen=document.getElementById('chosen'),err=document.getElementById('err'),preflight=document.getElementById('preflight'),localOcr=document.getElementById('local-ocr'),convertXlsx=document.getElementById('convert-xlsx'),ocrProgress=document.getElementById('ocr-progress'),note=document.getElementById('preflight-note'),help=document.getElementById('preflight-help');
 const PREFLIGHT_URL='https://zkcziucjogprfzhjuaex.supabase.co/functions/v1/preflight-rab';
 const MAX_BYTES=30*1024*1024;
-let selectedFile=null,pickerOpen=false,requestId=0,activeController=null,busy=false,ocrBusy=false,ocrAbortController=null,ocrNotice='',conversionBusy=false,conversionController=null,conversionNotice='';
+let selectedFile=null,pickerOpen=false,requestId=0,activeController=null,busy=false,ocrBusy=false,ocrAbortController=null,ocrNotice='',conversionBusy=false,conversionController=null,conversionNotice='',XLSX=null;
 let pageReports=[],lastPreflightResult=null,nextStartPage=1;
 input.addEventListener('cancel',()=>{pickerOpen=false});
 function showError(message){err.textContent=message;err.hidden=false}
@@ -307,7 +307,7 @@ function downloadWorkbook(sourceRows,totalPages,scannedPages,fileName){
     else {const offset=row.cells.length>=6&&/^\d{1,4}[.)]?$/.test(row.cells[0])&&/[A-Za-zÀ-ÖØ-öø-ÿ]{3,}/.test(row.cells[1])?1:0;no=offset?row.cells[0]:'';desc=row.cells[offset]||'';volume=row.cells[offset+1]||'';unit=row.cells[offset+2]||'';price=row.cells[offset+3]||'';amount=row.cells[offset+4]||''}
     if(!desc)desc=row.cells.find(value=>/[A-Za-zÀ-ÖØ-öø-ÿ]{3,}/.test(value)&&parseNumber(value)===null)||row.cells[0]||'';
     const numberVolume=parseNumber(volume),numberPrice=parseNumber(price),numberAmount=parseNumber(amount);
-    itemNo++;structured.push([parseNumber(no)??no||itemNo,desc,numberVolume??volume,unit,numberPrice??price,numberAmount??amount]);
+    itemNo++;structured.push([parseNumber(no) ?? (no || itemNo),desc,numberVolume ?? volume,unit,numberPrice ?? price,numberAmount ?? amount]);
   }
   const rab=[headers,...structured];
   const formulas=[];
@@ -329,6 +329,9 @@ async function convertAndDownloadExcel(){
   const setProgress=(value)=>{ocrProgress.hidden=false;ocrProgress.textContent=value};
   preflight.disabled=true;localOcr.disabled=true;convertXlsx.disabled=true;convertXlsx.textContent='Menyusun Excel…';err.hidden=true;
   try{
+    setProgress('Menyiapkan pembuat file Excel…');
+    const xlsxImport=await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm');
+    XLSX=xlsxImport.default||xlsxImport;
     setProgress('Membuka PDF dan mengekstrak susunan tabel…');
     const pdfjs=await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/build/pdf.mjs');
     pdfjs.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/build/pdf.worker.mjs';
