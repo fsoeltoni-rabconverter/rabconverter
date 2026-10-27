@@ -53,7 +53,7 @@ footer{border-top:1px solid rgba(215,224,217,.72);display:flex;justify-content:s
 <div class="hero"><div class="eyebrow"><span class="line"></span>PDF RAB MENJADI EXCEL</div><h1>RAB PDF ke Excel.<br><span>Tanpa Ketik Ulang.</span></h1><p class="desc">Ubah tabel RAB atau BoQ PDF menjadi Excel yang bisa diedit.</p></div>
 <section class="card" id="card" aria-label="Area upload PDF RAB">
 <div id="empty"><div class="illus"><div class="orbit"></div><div class="orbit two"></div><div class="fileicon"><svg viewBox="0 0 32 36" aria-hidden="true"><path d="M5 1.5h14l8 8V32a2.5 2.5 0 0 1-2.5 2.5h-19A2.5 2.5 0 0 1 3 32V4a2.5 2.5 0 0 1 2-2.5Z" fill="#fff" stroke="currentColor" stroke-width="1.5"/><path d="M19 1.5v8h8" fill="#eef5f0" stroke="currentColor" stroke-width="1.5"/><path d="M8 19h13M8 23.5h13M8 28h9" stroke="#638574" stroke-width="1.7" stroke-linecap="round"/></svg></div><div class="tag pdf">PDF</div><div class="tag xlsx">XLSX ↗</div></div><h2>Mulai dari PDF RAB atau BoQ kamu</h2><p class="hint">Tarik file ke sini, atau pilih PDF RAB/BoQ dari perangkat.</p><button class="primary" id="choose">Pilih PDF RAB <span>→</span></button><p class="limit">PDF saja · Maks. 30 MiB</p></div>
-<div id="chosen" class="file-state" hidden><div class="file-row"><div class="fileicon"><svg viewBox="0 0 32 36" aria-hidden="true"><path d="M5 1.5h14l8 8V32a2.5 2.5 0 0 1-2.5 2.5h-19A2.5 2.5 0 0 1 3 32V4a2.5 2.5 0 0 1 2-2.5Z" fill="#fff" stroke="currentColor" stroke-width="1.5"/><path d="M19 1.5v8h8" fill="#eef5f0" stroke="currentColor" stroke-width="1.5"/><path d="M8 19h13M8 23.5h13M8 28h9" stroke="#638574" stroke-width="1.7" stroke-linecap="round"/></svg></div><div class="meta"><span class="kicker">PDF DIPILIH</span><strong class="filename" id="filename"></strong><span class="size" id="filesize"></span></div><button class="remove" id="remove" aria-label="Ganti atau hapus file terpilih">×</button></div><div class="state-note" id="preflight-note"><span class="dot"></span>Pemeriksaan struktur saja; belum membaca tabel RAB atau menjalankan OCR.</div><div class="state-actions"><button class="primary" id="preflight" type="button">Periksa PDF <span>→</span></button><button class="secondary" id="local-ocr" type="button" hidden>OCR Lokal</button><button class="export-button" id="convert-xlsx" type="button" hidden>Konversi &amp; Unduh Excel</button><p class="limit" id="preflight-help">File dikirim untuk diperiksa, lalu langsung dibuang.</p><p class="limit" id="ocr-progress" role="status" hidden></p></div></div>
+<div id="chosen" class="file-state" hidden><div class="file-row"><div class="fileicon"><svg viewBox="0 0 32 36" aria-hidden="true"><path d="M5 1.5h14l8 8V32a2.5 2.5 0 0 1-2.5 2.5h-19A2.5 2.5 0 0 1 3 32V4a2.5 2.5 0 0 1 2-2.5Z" fill="#fff" stroke="currentColor" stroke-width="1.5"/><path d="M19 1.5v8h8" fill="#eef5f0" stroke="currentColor" stroke-width="1.5"/><path d="M8 19h13M8 23.5h13M8 28h9" stroke="#638574" stroke-width="1.7" stroke-linecap="round"/></svg></div><div class="meta"><span class="kicker">PDF DIPILIH</span><strong class="filename" id="filename"></strong><span class="size" id="filesize"></span></div><button class="remove" id="remove" aria-label="Ganti atau hapus file terpilih">×</button></div><div class="state-note" id="preflight-note"><span class="dot"></span>Pemeriksaan struktur saja; belum membaca tabel RAB atau menjalankan OCR.</div><div class="state-actions"><button class="export-button" id="convert-xlsx" type="button">Konversi dengan AI &amp; Unduh Excel</button><p class="limit">PDF dikirim ke Google Gemini API untuk pemahaman multimodal. RabConverter tidak menyimpan PDF secara permanen; kebijakan provider AI tetap berlaku.</p><button class="secondary" id="preflight" type="button">Periksa Struktur PDF (opsional) <span>→</span></button><button class="secondary" id="local-ocr" type="button" hidden>OCR Lokal (opsional)</button><p class="limit" id="preflight-help">File dikirim untuk diperiksa, lalu langsung dibuang.</p><p class="limit" id="ocr-progress" role="status" hidden></p></div></div>
 <input class="hidden" id="file" type="file" accept="application/pdf,.pdf" aria-label="Pilih dokumen PDF RAB"><p class="err" id="err" role="alert" hidden></p>
 </section>
 <div class="reassure"><div class="item"><span style="color:#38815b;font-size:17px">↗</span>Excel bisa diedit</div><span class="separator"></span><div class="item"><span class="check">✓</span>Kurangi input manual</div><span class="separator"></span><div class="item"><span class="check">✓</span>Periksa hasil sebelum dipakai</div></div>
@@ -106,7 +106,7 @@ function resetFile(){
   preflight.disabled=false;
   setPreflightLabel('Periksa PDF');
   updateNote('Pemeriksaan struktur dan teks PDF berjalan bertahap. OCR belum dijalankan.');
-  help.textContent='File hanya dipakai sementara dan tidak disimpan permanen.';
+  help.textContent='Konversi AI mengirim PDF ke Google Gemini API. RabConverter tidak menyimpan PDF atau hasil ekstraksi secara permanen.';
 }
 async function showFile(file){
   if(!file)return;
@@ -116,7 +116,7 @@ async function showFile(file){
   busy=false;
   err.hidden=true;
   note.classList.remove('is-success');
-  note.textContent='Pemeriksaan struktur saja; belum membaca tabel RAB atau menjalankan OCR.';
+  note.textContent='PDF siap diproses AI multimodal; pemeriksaan struktur bersifat opsional.';
   preflight.disabled=false;
   preflight.querySelector('span').textContent='→';
   if(file.size===0){resetFile();showError('File kosong. Coba pilih PDF lain.');return}
@@ -133,6 +133,9 @@ async function showFile(file){
   }
   if(validationId!==requestId)return;
   selectedFile=file;
+  convertXlsx.hidden=false;
+  convertXlsx.disabled=false;
+  convertXlsx.textContent='Konversi dengan AI & Unduh Excel';
   document.getElementById('filename').textContent=file.name;
   document.getElementById('filesize').textContent=(file.size<1048576?Math.max(1,Math.round(file.size/1024))+' KB':(file.size/1048576).toFixed(1)+' MiB')+' · PDF';
   empty.hidden=true;chosen.hidden=false;
@@ -212,15 +215,13 @@ function renderSummary(totalPages){
   if(summary.pagesUnreadableAfterOcr.length)details+=' · OCR tidak menemukan teks pada '+summary.pagesUnreadableAfterOcr.length+' halaman';
   if(summary.truncatedPages.length)details+=' · teks dibatasi pada '+summary.truncatedPages.length+' halaman';
   if(ocrNotice)details+=' · '+ocrNotice;
-  help.textContent=details+'. OCR memproses scan di perangkat; PDF/teks OCR tidak dikirim ke layanan OCR.';
   if(conversionNotice)details+=' · '+conversionNotice;
-  help.textContent=details+'. OCR memproses scan di perangkat; PDF/teks OCR tidak dikirim ke layanan OCR.';
+  help.textContent=details+'. Konversi utama menggunakan AI Gemini multimodal; pemeriksaan struktur/OCR lokal hanya opsional.';
   localOcr.hidden=summary.pagesNeedingOcr.length===0||ocrBusy||conversionBusy;
-  if(!localOcr.hidden)localOcr.textContent='OCR Lokal · Halaman '+summary.pagesNeedingOcr.slice(0,5).join(', ');
-  const hasCompleteReview=Boolean(lastPreflightResult&&lastPreflightResult.nextStartPage===null&&pageReports.length===totalPages);
-  convertXlsx.hidden=!hasCompleteReview;
-  convertXlsx.disabled=conversionBusy||ocrBusy||busy||totalPages>50;
-  convertXlsx.textContent=conversionBusy?'Menyusun Excel…':totalPages>50?'Konversi beta: maks. 50 halaman':'Konversi & Unduh Excel';
+  if(!localOcr.hidden)localOcr.textContent='OCR Lokal (opsional) · Halaman '+summary.pagesNeedingOcr.slice(0,5).join(', ');
+  convertXlsx.hidden=!selectedFile;
+  convertXlsx.disabled=conversionBusy||ocrBusy||busy;
+  convertXlsx.textContent=conversionBusy?'AI sedang membaca dokumen…':'Konversi dengan AI & Unduh Excel';
 }
 function classifyLocalText(extractedText,ocrAttempted){
   const text=String(extractedText||'').trim();
@@ -355,195 +356,79 @@ function downloadWorkbook(sourceRows,totalPages,scannedPages,fileName){
   const base=fileName.replace(/\.pdf$/i,'').replace(/[^a-z0-9._ -]+/gi,'').trim()||'rab-converted';a.href=url;a.download=base+'.xlsx';a.style.display='none';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
   return {structuredCount:structured.length,sourceCount:sourceRows.length};
 }
+function downloadAiWorkbook(payload,fileName){
+  const rows=payload.rows||[],book=XLSX.utils.book_new();
+  const main=[
+    ['No / Urutan','Kode','Uraian Pekerjaan','Volume','Satuan','Harga Satuan (Rp)','Jumlah Harga (Rp)','Jenis Baris','Halaman Sumber','Keyakinan AI','Validasi Volume × Harga','Perlu Review','Alasan Review'],
+    ...rows.map(row=>[row.itemNumber,row.code,row.description,row.quantityValue===null?row.quantityText:row.quantityValue,row.unit,row.unitPriceValue===null?row.unitPriceText:row.unitPriceValue,row.amountValue===null?row.amountText:row.amountValue,row.rowType,row.sourcePage,row.confidence,row.lineMathCheck,row.needsReview?'YA':'TIDAK',row.reviewReason])
+  ];
+  const wsMain=XLSX.utils.aoa_to_sheet(main);
+  wsMain['!cols']=[{wch:14},{wch:18},{wch:55},{wch:14},{wch:12},{wch:22},{wch:22},{wch:13},{wch:14},{wch:14},{wch:24},{wch:14},{wch:64}];
+  if(rows.length)wsMain['!autofilter']={ref:'A1:M'+(rows.length+1)};
+  XLSX.utils.book_append_sheet(book,wsMain,'RAB Terstruktur');
+  const evidence=[
+    ['Halaman','Urutan Baris','Tipe Baris','No / Urutan Asli','Kode Asli','Uraian Asli dari AI','Volume Asli','Satuan Asli','Harga Satuan Asli','Jumlah Harga Asli','Transkripsi Baris','Keyakinan AI','Perlu Review','Validasi Hitungan','Alasan Review'],
+    ...rows.map(row=>[row.sourcePage,row.rowIndex,row.rowType,row.itemNumber,row.code,row.description,row.quantityText,row.unit,row.unitPriceText,row.amountText,row.rawLine,row.confidence,row.needsReview?'YA':'TIDAK',row.lineMathCheck,row.reviewReason])
+  ];
+  const wsEvidence=XLSX.utils.aoa_to_sheet(evidence);
+  wsEvidence['!cols']=[{wch:10},{wch:14},{wch:14},{wch:16},{wch:18},{wch:50},{wch:16},{wch:14},{wch:22},{wch:22},{wch:100},{wch:14},{wch:14},{wch:22},{wch:64}];
+  if(rows.length)wsEvidence['!autofilter']={ref:'A1:O'+(rows.length+1)};
+  XLSX.utils.book_append_sheet(book,wsEvidence,'Bukti AI');
+  const quality=payload.quality||{},usage=payload.usage||{},doc=payload.document||{};
+  const summary=[
+    ['RabConverter — Hasil Ekstraksi AI'],['Nama File',fileName],['Judul Dokumen',doc.title||''],['Nama Proyek',doc.projectName||''],['Tahun Anggaran',doc.year||''],['Mata Uang',doc.currency||'IDR'],['Jumlah Halaman',doc.pageCount||0],
+    ['Baris yang Diekstrak',quality.rowCount||rows.length],['Baris Item',quality.itemCount||0],['Baris Perlu Review',quality.reviewCount||0],['Mismatch Volume × Harga',quality.mismatchCount||0],['Keyakinan Rendah',quality.lowConfidenceCount||0],
+    ['Halaman Tanpa Tabel Terdeteksi',(quality.pagesWithoutTable||[]).join(', ')||'-'],['Model AI',payload.model||''],['Token Input Dilaporkan',usage.inputTokens||0],['Token Output Dilaporkan',usage.outputTokens||0],['Panggilan Model',usage.calls||0],['Retry Provider',usage.retries||0],['Retry karena Output Terpotong / Tidak Valid',usage.splitRetries||0],
+    ['Penyimpanan','PDF dan hasil ekstraksi tidak disimpan permanen oleh RabConverter.'],['Pemrosesan AI','PDF dikirim ke Google Gemini API untuk pemahaman dokumen multimodal; kebijakan provider berlaku.'],['Penting','Nilai sumber tidak dihitung ulang atau ditimpa. Cocokkan angka, satuan, subtotal, pajak dan total terhadap PDF asli.'],['Peringatan'],...(quality.warnings||[]).map((warning,index)=>['Warning '+(index+1),warning])
+  ];
+  const wsSummary=XLSX.utils.aoa_to_sheet(summary);wsSummary['!cols']=[{wch:48},{wch:115}];
+  XLSX.utils.book_append_sheet(book,wsSummary,'Ringkasan');
+  const pageRows=[['Halaman Sumber','Tabel Terdeteksi','Catatan AI'],...(payload.pageSummaries||[]).map(page=>[page.sourcePage,page.tableDetected?'YA':'TIDAK',page.notes])];
+  const wsPages=XLSX.utils.aoa_to_sheet(pageRows);wsPages['!cols']=[{wch:16},{wch:18},{wch:100}];
+  XLSX.utils.book_append_sheet(book,wsPages,'Cakupan Halaman');
+  const output=XLSX.write(book,{bookType:'xlsx',type:'array'}),blob=new Blob([output],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+  const base=fileName.replace(/\\.pdf$/i,'').replace(/[^\\p{L}\\p{N}._ -]+/gu,'').trim()||'rab-ai-converted';a.href=url;a.download=base+'.xlsx';a.style.display='none';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+  return {fileName:base+'.xlsx'};
+}
 async function convertAndDownloadExcel(){
-  if(!selectedFile||busy||ocrBusy||conversionBusy||!lastPreflightResult||lastPreflightResult.nextStartPage!==null||pageReports.length!==lastPreflightResult.pageCount)return;
-  if(lastPreflightResult.pageCount>50){showError('Konversi beta dibatasi maksimal 50 halaman per file.');return}
+  if(!selectedFile||busy||ocrBusy||conversionBusy)return;
   conversionBusy=true;conversionNotice='';conversionController=new AbortController();const id=++requestId,signal=conversionController.signal;
   const setProgress=(value)=>{ocrProgress.hidden=false;ocrProgress.textContent=value};
-  preflight.disabled=true;localOcr.disabled=true;convertXlsx.disabled=true;convertXlsx.textContent='Menyusun Excel…';err.hidden=true;
+  preflight.disabled=true;localOcr.disabled=true;convertXlsx.disabled=true;convertXlsx.textContent='AI sedang membaca dokumen…';err.hidden=true;
   try{
-    setProgress('Menyiapkan pembuat file Excel…');
+    setProgress('Menyiapkan AI multimodal dan mengirim PDF…');
+    const response=await fetch('https://zkcziucjogprfzhjuaex.supabase.co/functions/v1/rab-ai-convert',{method:'POST',headers:{'Content-Type':'application/pdf'},body:selectedFile,signal,cache:'no-store'});
+    const payload=await response.json().catch(()=>null);
+    if(id!==requestId||signal.aborted)return;
+    if(!response.ok||!payload||payload.ok!==true||payload.status!=='AI_EXTRACTION_COMPLETE'){
+      const code=payload&&typeof payload.code==='string'?payload.code:'AI_UNKNOWN_ERROR';
+      const message=payload&&typeof payload.message==='string'?payload.message:'Konversi AI gagal.';
+      if(code==='AI_NOT_CONFIGURED')throw new Error('AI belum diaktifkan. Admin perlu memasang secret GEMINI_API_KEY di Supabase.');
+      if(code==='AI_RATE_LIMITED')throw new Error('Batas konversi AI sudah tercapai. Coba lagi setelah waktu reset.');
+      if(code==='AI_PROVIDER_AUTH_FAILED')throw new Error('Kunci API AI ditolak. Admin perlu memeriksa GEMINI_API_KEY dan akses model.');
+      throw new Error(message);
+    }
+    setProgress('AI selesai membaca tabel. Menyusun workbook dan laporan validasi…');
     const xlsxImport=await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm');
     XLSX=xlsxImport.default||xlsxImport;
-    setProgress('Membuka PDF dan mengekstrak susunan tabel…');
-    const pdfjs=await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/build/pdf.mjs');
-    pdfjs.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/build/pdf.worker.mjs';
-    const task=pdfjs.getDocument({data:new Uint8Array(await selectedFile.arrayBuffer()),useWorkerFetch:false});const pdf=await task.promise;
-    if(pdf.numPages>50)throw new Error('Konversi beta dibatasi maksimal 50 halaman per file.');
-    const sourceRows=[],scanPages=[];let ocrWorker=null,workerTerminated=false;
-    const terminateWorker=async()=>{if(ocrWorker&&!workerTerminated){workerTerminated=true;await ocrWorker.terminate()}};
-    try{
-      for(let n=1;n<=pdf.numPages;n++){
-        if(signal.aborted)throw new DOMException('Konversi dibatalkan.','AbortError');
-        setProgress('Mengekstrak susunan teks halaman '+n+' dari '+pdf.numPages+'…');
-        const pg=await pdf.getPage(n);
-        try{
-          const content=await pg.getTextContent(),items=content.items||[],hasText=items.some(item=>typeof item.str==='string'&&item.str.trim());
-          let rows=[];
-          if(hasText){const viewport=pg.getViewport({scale:1});rows=cellsFromPositioned(items.map(item=>({...item,transform:[...item.transform.slice(0,4),item.transform[4],viewport.height-item.transform[5]]})))}
-          if(hasText)rows.forEach((cells,i)=>sourceRows.push({pageNumber:n,lineNumber:i+1,cells}));
-          else{
-            scanPages.push(n);const cached=pageReports.find(page=>page.pageNumber===n&&page.ocrAttempted&&Array.isArray(page.rows));
-            if(cached)cached.rows.forEach((cells,i)=>sourceRows.push({pageNumber:n,lineNumber:i+1,cells}));
-          }
-        }finally{pg.cleanup()}
-      }
-      const missing=scanPages.filter(n=>!pageReports.some(page=>page.pageNumber===n&&page.ocrAttempted&&Array.isArray(page.rows)));
-      if(missing.length){
-        setProgress('Menyiapkan mesin OCR untuk '+missing.length+' halaman scan…');
-        const tess=await import('https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/+esm');
-        ocrWorker=await tess.createWorker('ind+eng',1,{workerPath:'https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/worker.min.js',logger:event=>{if(id===requestId&&!signal.aborted&&String(event.status||'').toLowerCase().includes('recogniz'))setProgress('OCR otomatis '+Math.round((event.progress||0)*100)+'%')}});if(signal.aborted)throw new DOMException('Konversi dibatalkan.','AbortError');
-        for(const n of missing){
-          setProgress('Membaca scan halaman '+n+' dengan OCR lokal…');const pg=await pdf.getPage(n),canvas=document.createElement('canvas');
-          try{
-            const base=pg.getViewport({scale:1}),scale=Math.min(2,Math.sqrt(4000000/(base.width*base.height)),3000/Math.max(base.width,base.height));if(!Number.isFinite(scale)||scale<.35)throw new Error('Ukuran halaman terlalu besar untuk OCR yang aman.');
-            const viewport=pg.getViewport({scale});canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);const ctx=canvas.getContext('2d',{alpha:false});if(!ctx)throw new Error('Browser tidak dapat menyiapkan OCR.');
-            ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);await pg.render({canvas,canvasContext:ctx,viewport,background:'#ffffff'}).promise;
-            const recognized=await ocrWorker.recognize(canvas),rawText=String(recognized.data.text||'').trim(),text=rawText.slice(0,20000),rows=cellsFromOcrWords(recognized.data.words||[],text);
-            rows.forEach((cells,i)=>sourceRows.push({pageNumber:n,lineNumber:i+1,cells}));
-            pageReports=pageReports.map(report=>report.pageNumber===n?{...report,textChars:text.length,textFound:text.length>0,ocrAttempted:true,rows,text,classification:classifyLocalText(text,true)}:report);
-          }finally{pg.cleanup();canvas.width=0;canvas.height=0}
-        }
-      }
-      if(signal.aborted)throw new DOMException('Konversi dibatalkan.','AbortError');
-      setProgress('Menyusun workbook Excel dengan tabel dan teks sumber…');
-      const result=await downloadWorkbook(sourceRows,pdf.numPages,scanPages.length,selectedFile.name);
-      conversionNotice='File Excel berhasil diunduh. '+pdf.numPages+' halaman diproses; '+scanPages.length+' halaman scan; '+result.structuredCount+' baris tabel; '+result.sourceCount+' baris sumber ditemukan. Periksa sheet Teks Sumber dan cocokkan angka dengan PDF asli.';
-      renderSummary(pdf.numPages);setProgress('Konversi selesai. File Excel sudah diunduh; tetap periksa angka dan tabel hasilnya.');
-    }finally{await terminateWorker().catch(()=>undefined);await task.destroy().catch(()=>undefined)}
-  }catch(error){if(id===requestId&&!signal.aborted)showError(error&&error.message?'Konversi gagal: '+error.message:'Konversi gagal. Coba PDF lain.')}
-  finally{if(id===requestId){conversionBusy=false;conversionController=null;preflight.disabled=false;localOcr.disabled=false;const complete=Boolean(lastPreflightResult&&lastPreflightResult.nextStartPage===null&&pageReports.length===lastPreflightResult.pageCount);convertXlsx.hidden=!complete;convertXlsx.disabled=!complete||lastPreflightResult.pageCount>50;convertXlsx.textContent=lastPreflightResult&&lastPreflightResult.pageCount>50?'Konversi beta: maks. 50 halaman':'Konversi & Unduh Excel';}}
-}
-async function runPreflight(){
-  if(!selectedFile||busy||ocrBusy)return;
-  const restarting=lastPreflightResult&&lastPreflightResult.nextStartPage===null;
-  const startPage=restarting?1:nextStartPage;
-  if(restarting){pageReports=[];lastPreflightResult=null;nextStartPage=1;ocrNotice='';localOcr.hidden=true}
-  busy=true;
-  const id=++requestId;
-  const controller=new AbortController();
-  activeController=controller;
-  preflight.disabled=true;
-  setPreflightLabel('Membaca teks…');
-  updateNote('Mengekstrak teks PDF secara bertahap. OCR dan render gambar tidak dijalankan.');
-  help.textContent='Maksimal 5 halaman per permintaan. PDF tidak disimpan permanen.';
-  err.hidden=true;
-  try{
-    const response=await fetch(PREFLIGHT_URL,{
-      method:'POST',
-      headers:{'Content-Type':'application/pdf','x-preflight-start-page':String(startPage)},
-      body:selectedFile,
-      signal:controller.signal
-    });
-    const payload=await response.json().catch(()=>null);
-    if(id!==requestId)return;
-    if(!response.ok||!payload||payload.ok!==true||typeof payload.pageCount!=='number'||!Array.isArray(payload.pageResults)||!(payload.nextStartPage===null||typeof payload.nextStartPage==='number')){
-      showError(payload?.message||'Pemeriksaan PDF gagal. Coba lagi nanti.');
-      return;
-    }
-    const reports=new Map(pageReports.map(page=>[page.pageNumber,page]));
-    for(const page of payload.pageResults)reports.set(page.pageNumber,page);
-    pageReports=[...reports.values()].sort((a,b)=>a.pageNumber-b.pageNumber);
-    lastPreflightResult=payload;
-    nextStartPage=payload.nextStartPage??1;
-    const complete=payload.nextStartPage===null&&pageReports.length===payload.pageCount;
-    renderSummary(payload.pageCount);
-    setPreflightLabel(payload.nextStartPage===null?'Ulangi Pemeriksaan':'Periksa Halaman Berikutnya');
+    if(id!==requestId||signal.aborted)return;
+    const download=downloadAiWorkbook(payload,selectedFile.name);
+    const quality=payload.quality||{};
+    conversionNotice='Excel AI berhasil diunduh: '+download.fileName+'. '+(payload.document?.pageCount||0)+' halaman; '+(quality.rowCount||0)+' baris diekstrak; '+(quality.reviewCount||0)+' perlu review; '+(quality.mismatchCount||0)+' mismatch hitungan. Periksa sheet Bukti AI dan Ringkasan.';
+    setProgress('Konversi AI selesai. Excel sudah diunduh; periksa seluruh baris yang ditandai review.');
+    help.textContent=conversionNotice+' PDF diproses oleh Google Gemini API dan tidak disimpan permanen oleh RabConverter.';
+    updateNote('Ekstraksi AI selesai — periksa nilai yang ditandai review.',quality.reviewCount===0&&quality.mismatchCount===0);
   }catch(error){
-    if(id!==requestId||(error&&error.name==='AbortError'))return;
-    showError('Tidak dapat menghubungi pemeriksaan server. Periksa koneksi lalu coba lagi.');
+    if(id!==requestId||signal.aborted||(error instanceof Error&&error.name==='AbortError'))return;
+    showError(error&&error.message?error.message:'Konversi AI gagal. Coba lagi nanti.');
+    setProgress('');
   }finally{
     if(id===requestId){
-      busy=false;
-      activeController=null;
-      preflight.disabled=false;
-      if(!lastPreflightResult)setPreflightLabel('Periksa PDF');
-      else if(lastPreflightResult.nextStartPage===null)setPreflightLabel('Ulangi Pemeriksaan');
-      else setPreflightLabel('Periksa Halaman Berikutnya');
-      if(lastPreflightResult)renderSummary(lastPreflightResult.pageCount);
+      conversionBusy=false;conversionController=null;preflight.disabled=false;localOcr.disabled=false;convertXlsx.hidden=!selectedFile;convertXlsx.disabled=!selectedFile;convertXlsx.textContent='Konversi dengan AI & Unduh Excel';
     }
   }
 }
-async function runLocalOcr(){
-  if(!selectedFile||busy||ocrBusy)return;
-  const summary=summarizePageReports(pageReports,Boolean(lastPreflightResult&&lastPreflightResult.nextStartPage===null&&pageReports.length===lastPreflightResult.pageCount));
-  const targets=summary.pagesNeedingOcr.slice(0,5);
-  if(!targets.length)return;
-  ocrBusy=true;
-  const id=++requestId;
-  const controller=new AbortController();
-  ocrAbortController=controller;
-  let ocrWorker=null,workerTerminated=false,pdfTask=null;
-  const terminateWorker=async()=>{if(ocrWorker&&!workerTerminated){workerTerminated=true;await ocrWorker.terminate()}};
-  const abortWorker=()=>{void terminateWorker().catch(()=>undefined)};
-  controller.signal.addEventListener('abort',abortWorker,{once:true});
-  const throwIfAborted=()=>{if(controller.signal.aborted)throw new DOMException('OCR dibatalkan.','AbortError')};
-  const setProgress=(text)=>{ocrProgress.hidden=false;ocrProgress.textContent=text};
-  preflight.disabled=true;localOcr.disabled=true;
-  setProgress('Membuka PDF dan menyiapkan OCR lokal…');
-  err.hidden=true;
-  try{
-    const pdfjs=await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/build/pdf.mjs');
-    pdfjs.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/build/pdf.worker.mjs';
-    throwIfAborted();
-    pdfTask=pdfjs.getDocument({data:new Uint8Array(await selectedFile.arrayBuffer()),isEvalSupported:false,useWorkerFetch:false});
-    const pdf=await pdfTask.promise;
-    if(pdf.numPages<1||pdf.numPages>200||targets.some(page=>page>pdf.numPages))throw new Error('Jumlah halaman PDF tidak sesuai batas pemeriksaan.');
-    setProgress('Mengunduh mesin OCR dan model bahasa Indonesia + Inggris…');
-    const tess=await import('https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/+esm');
-    ocrWorker=await tess.createWorker('ind+eng',1,{workerPath:'https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/worker.min.js',logger:(event)=>{
-      if(id!==requestId||controller.signal.aborted)return;
-      const current=event.progress&&event.progress<1?' '+Math.round(event.progress*100)+'%':'';
-      const status=String(event.status||'');
-      if(status.toLowerCase().includes('recogniz'))setProgress('Mengenali teks halaman scan…'+current);
-      else if(status.toLowerCase().includes('loading'))setProgress('Menyiapkan model OCR lokal…'+current);
-    }});
-    throwIfAborted();
-    const recognizedReports=[];
-    for(let index=0;index<targets.length;index++){
-      throwIfAborted();
-      const pageNumber=targets[index];
-      setProgress('Merender halaman '+pageNumber+' ('+(index+1)+'/'+targets.length+')…');
-      const page=await pdf.getPage(pageNumber);
-      const canvas=document.createElement('canvas');
-      try{
-        const base=page.getViewport({scale:1});
-        const scale=Math.min(2,Math.sqrt(4000000/(base.width*base.height)),3000/Math.max(base.width,base.height));
-        if(!Number.isFinite(scale)||scale<0.35)throw new Error('Ukuran halaman terlalu besar untuk OCR lokal yang aman.');
-        const viewport=page.getViewport({scale});canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);
-        const context=canvas.getContext('2d',{alpha:false,willReadFrequently:true});
-        if(!context)throw new Error('Browser tidak dapat menyiapkan kanvas OCR.');
-        context.fillStyle='#fff';context.fillRect(0,0,canvas.width,canvas.height);
-        await page.render({canvasContext:context,viewport,background:'#ffffff'}).promise;
-        throwIfAborted();
-        setProgress('Mengenali teks halaman '+pageNumber+'…');
-        const recognized=await ocrWorker.recognize(canvas);
-        throwIfAborted();
-        const rawText=String(recognized.data.text||'').trim();const text=rawText.slice(0,20000),rows=cellsFromOcrWords(recognized.data.words||[],text);
-        recognizedReports.push({pageNumber,textChars:text.length,textFound:text.length>0,truncated:rawText.length>20000,ocrAttempted:true,classification:classifyLocalText(text,true),text,rows});
-      }finally{page.cleanup();canvas.width=0;canvas.height=0}
-    }
-    if(id!==requestId||controller.signal.aborted)return;
-    const resultByPage=new Map(recognizedReports.map(page=>[page.pageNumber,page]));
-    pageReports=pageReports.map(page=>resultByPage.has(page.pageNumber)?{...page,...resultByPage.get(page.pageNumber)}:page);
-    ocrNotice='OCR lokal selesai untuk halaman '+recognizedReports.map(page=>page.pageNumber).join(', ')+'. Teks tidak dikirim ke server.';
-    renderSummary(lastPreflightResult.pageCount);
-    setProgress('OCR lokal selesai. Periksa kembali hasil klasifikasi; teks OCR belum menjadi tabel Excel.');
-  }catch(error){
-    if(id===requestId&&!controller.signal.aborted)showError(error&&error.message?'OCR lokal gagal: '+error.message:'OCR lokal gagal. Periksa koneksi lalu coba lagi.');
-  }finally{
-    controller.signal.removeEventListener('abort',abortWorker);
-    await terminateWorker().catch(()=>undefined);
-    if(pdfTask)await pdfTask.destroy().catch(()=>undefined);
-    if(id===requestId){ocrBusy=false;ocrAbortController=null;preflight.disabled=false;localOcr.disabled=false;
-      const summary=summarizePageReports(pageReports,Boolean(lastPreflightResult&&lastPreflightResult.nextStartPage===null&&pageReports.length===lastPreflightResult.pageCount));
-      localOcr.hidden=summary.pagesNeedingOcr.length===0;
-      if(!localOcr.hidden)localOcr.textContent='OCR Lokal · Halaman '+summary.pagesNeedingOcr.slice(0,5).join(', ');
-      ocrProgress.hidden=false;
-      if(lastPreflightResult)renderSummary(lastPreflightResult.pageCount);
-    }
-  }
-}
+
 document.getElementById('choose').addEventListener('click',()=>{if(!pickerOpen){pickerOpen=true;input.click()}});
 input.addEventListener('change',event=>{pickerOpen=false;showFile(event.target.files[0]);input.value=''});
 document.getElementById('remove').addEventListener('click',resetFile);
