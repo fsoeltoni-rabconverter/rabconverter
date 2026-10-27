@@ -151,8 +151,11 @@ async function readBoundedBody(request: Request, maxBytes: number): Promise<Uint
 }
 
 function isEncryptedPdfError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message.toLowerCase() : "";
-  return message.includes("encrypt") || message.includes("password");
+  if (!(error instanceof Error)) return false;
+  const message = error.message.toLowerCase();
+  return error.name === "PasswordException" ||
+    message.includes("encrypt") ||
+    message.includes("password");
 }
 
 Deno.serve(async (request: Request) => {
