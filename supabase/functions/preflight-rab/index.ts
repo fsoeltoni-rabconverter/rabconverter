@@ -1,9 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 import { PDFDocument } from "npm:pdf-lib@1.17.1";
+import { hasPdfHeader, hasPdfTerminator } from "./pdf-envelope.js";
 
 const MAX_FILE_SIZE_BYTES = 30 * 1024 * 1024;
 const MAX_PDF_PAGES = 200;
-const HEADER_WINDOW_BYTES = 1024;
 
 const ALLOWED_ORIGINS = new Set([
   "https://rabconverter-preview.rabconverter-id.workers.dev",
@@ -147,11 +147,6 @@ async function readBoundedBody(request: Request, maxBytes: number): Promise<Uint
   return combined;
 }
 
-function containsPdfHeader(bytes: Uint8Array): boolean {
-  const head = new TextDecoder("latin1").decode(bytes.subarray(0, HEADER_WINDOW_BYTES));
-  return head.includes("%PDF-");
-}
-
 function isEncryptedPdfError(error: unknown): boolean {
   const message = error instanceof Error ? error.message.toLowerCase() : "";
   return message.includes("encrypt") || message.includes("password");
@@ -290,8 +285,11 @@ Deno.serve(async (request: Request) => {
         maxFileSizeBytes: MAX_FILE_SIZE_BYTES,
       });
     }
-    if (!containsPdfHeader(bytes)) {
+    if (!hasPdfHeader(bytes)) {
       return errorResponse("NOT_A_PDF", "File tidak memiliki header PDF yang valid.", 415, origin);
+    }
+    if (!hasPdfTerminator(bytes)) {
+      return errorResponse("PDF_CORRUPT", "PDF tidak memiliki penanda akhir dokumen yang valid.", 422, origin);
     }
 
     // Parse document structure only: no page rendering, text extraction, OCR, or file persistence.
