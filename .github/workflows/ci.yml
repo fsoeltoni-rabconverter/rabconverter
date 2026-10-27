@@ -28,6 +28,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Preflight tests
         run: npm run test:preflight
+      - name: Server PDF parser tests
+        run: npm run test:server-pdf
       - name: Typecheck
         run: npm run typecheck
       - name: Build
