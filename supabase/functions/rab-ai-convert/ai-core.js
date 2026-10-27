@@ -80,7 +80,6 @@ export function normalizeAiBatch(output, { startPage, pageCount }) {
 
     let localPage = Number(inputRow.batchPageIndex);
     const invalidPageIndex = !Number.isInteger(localPage) || localPage < 1 || localPage > pageCount;
-    if (invalidPageIndex) localPage = 1;
     const invalidRowType = !AI_ROW_TYPES.includes(inputRow.rowType);
     const rowType = invalidRowType ? "unknown" : inputRow.rowType;
     const invalidConfidence = !CONFIDENCE.has(inputRow.confidence);
@@ -88,7 +87,7 @@ export function normalizeAiBatch(output, { startPage, pageCount }) {
 
     const item = {
       rowIndex: index + 1,
-      sourcePage: startPage + localPage - 1,
+      sourcePage: invalidPageIndex ? null : startPage + localPage - 1,
       rowType,
       itemNumber: cleanText(inputRow.itemNumber, 100),
       code: cleanText(inputRow.code, 200),
