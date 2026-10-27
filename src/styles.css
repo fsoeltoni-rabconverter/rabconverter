@@ -218,3 +218,32 @@ h1 span { color: #247454; }
   color: #87978b;
   background: #f1f4f1;
 }
+
+
+.export-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(100%, 440px);
+  min-height: 48px;
+  margin-top: 10px;
+  padding: 13px 18px;
+  border: 0;
+  border-radius: 10px;
+  color: #fff;
+  background: #247454;
+  font-size: 13px;
+  font-weight: 800;
+  box-shadow: 0 5px 12px rgba(36, 116, 84, .14);
+  transition: background .18s ease, transform .18s ease, box-shadow .18s ease;
+}
+.export-button:hover:not(:disabled) {
+  background: #176746;
+  transform: translateY(-1px);
+  box-shadow: 0 7px 14px rgba(36, 116, 84, .18);
+}
+.export-button:disabled {
+  cursor: progress;
+  background: #8da799;
+  box-shadow: none;
+}

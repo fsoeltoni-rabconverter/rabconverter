@@ -22,6 +22,7 @@ button{font:700 13px "Plus Jakarta Sans",sans-serif;cursor:pointer}.primary{disp
 .file-state .fileicon{width:46px;height:50px;transform:none;box-shadow:none}.file-state .fileicon svg{width:27px;height:30px}.meta{display:flex;flex-direction:column;gap:4px;min-width:0}.kicker{font-size:9px;letter-spacing:1.25px;font-weight:800;color:#42815d}.filename{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;color:#29362e}.size{font-size:11px;color:#909a93}
 .remove{border:1px solid #e6ebe6;background:#f6f8f6;color:#67756b;border-radius:8px;width:34px;height:34px;font-size:19px;line-height:1}.state-note{display:flex;gap:8px;align-items:flex-start;font-size:11px;line-height:1.5;color:#777356;background:#fbfaf3;border:1px solid #e9e7d8;border-radius:9px;padding:10px 12px}.state-note .dot{flex-shrink:0;margin:4px 0 0;background:#d4ac48}.state-note.is-success{background:#f2f8f3;border-color:#cfe3d4;color:#285a3c}.state-note.is-success .dot{background:#4a9564}.state-actions{display:flex;flex-direction:column;align-items:center;gap:0}.state-actions .primary{width:100%}.state-actions .limit{text-align:center}
 .secondary{display:flex;align-items:center;justify-content:center;width:100%;min-height:42px;margin-top:10px;padding:11px 14px;border:1px solid #cbdccf;border-radius:9px;color:#195b3d;background:#f7fbf7;font-size:12px;font-weight:750;transition:background .18s,border-color .18s}.secondary:hover:not(:disabled){background:#eaf4ed;border-color:#9fc3aa}.secondary:disabled{cursor:not-allowed;color:#87978b;background:#f1f4f1}
+.export-button{display:flex;align-items:center;justify-content:center;width:100%;min-height:46px;margin-top:10px;padding:13px 16px;border:0;border-radius:9px;color:#fff;background:#247454;font-size:13px;font-weight:800;box-shadow:0 5px 12px rgba(36,116,84,.14);transition:background .18s,transform .18s}.export-button:hover:not(:disabled){background:#176746;transform:translateY(-1px)}.export-button:disabled{cursor:progress;background:#8da799;box-shadow:none}
 .err{color:#a63d35;font-size:12px;text-align:center;margin:12px 0 0}.reassure{display:flex;align-items:center;gap:15px;color:#77827a;margin-top:17px;font-size:11px}.item{display:flex;align-items:center;gap:7px;white-space:nowrap}.check{display:grid;place-items:center;border:1px solid #c8ddce;color:#40845e;border-radius:50%;width:14px;height:14px;font-size:9px}.separator{width:3px;height:3px;border-radius:50%;background:#c8d1ca}
 footer{border-top:1px solid rgba(215,224,217,.72);display:flex;justify-content:space-between;align-items:center;gap:16px;width:min(1160px,calc(100% - 64px));min-height:60px;margin:auto auto 0;color:#9aa39c;font-size:10px}.footnote{color:#a9b0aa}
 @media(min-height:850px){main{padding-top:66px}.card{min-height:330px}}
@@ -52,16 +53,16 @@ footer{border-top:1px solid rgba(215,224,217,.72);display:flex;justify-content:s
 <div class="hero"><div class="eyebrow"><span class="line"></span>PDF RAB MENJADI EXCEL</div><h1>RAB PDF ke Excel.<br><span>Tanpa Ketik Ulang.</span></h1><p class="desc">Ubah tabel RAB atau BoQ PDF menjadi Excel yang bisa diedit.</p></div>
 <section class="card" id="card" aria-label="Area upload PDF RAB">
 <div id="empty"><div class="illus"><div class="orbit"></div><div class="orbit two"></div><div class="fileicon"><svg viewBox="0 0 32 36" aria-hidden="true"><path d="M5 1.5h14l8 8V32a2.5 2.5 0 0 1-2.5 2.5h-19A2.5 2.5 0 0 1 3 32V4a2.5 2.5 0 0 1 2-2.5Z" fill="#fff" stroke="currentColor" stroke-width="1.5"/><path d="M19 1.5v8h8" fill="#eef5f0" stroke="currentColor" stroke-width="1.5"/><path d="M8 19h13M8 23.5h13M8 28h9" stroke="#638574" stroke-width="1.7" stroke-linecap="round"/></svg></div><div class="tag pdf">PDF</div><div class="tag xlsx">XLSX ↗</div></div><h2>Mulai dari PDF RAB atau BoQ kamu</h2><p class="hint">Tarik file ke sini, atau pilih PDF RAB/BoQ dari perangkat.</p><button class="primary" id="choose">Pilih PDF RAB <span>→</span></button><p class="limit">PDF saja · Maks. 30 MiB</p></div>
-<div id="chosen" class="file-state" hidden><div class="file-row"><div class="fileicon"><svg viewBox="0 0 32 36" aria-hidden="true"><path d="M5 1.5h14l8 8V32a2.5 2.5 0 0 1-2.5 2.5h-19A2.5 2.5 0 0 1 3 32V4a2.5 2.5 0 0 1 2-2.5Z" fill="#fff" stroke="currentColor" stroke-width="1.5"/><path d="M19 1.5v8h8" fill="#eef5f0" stroke="currentColor" stroke-width="1.5"/><path d="M8 19h13M8 23.5h13M8 28h9" stroke="#638574" stroke-width="1.7" stroke-linecap="round"/></svg></div><div class="meta"><span class="kicker">PDF DIPILIH</span><strong class="filename" id="filename"></strong><span class="size" id="filesize"></span></div><button class="remove" id="remove" aria-label="Ganti atau hapus file terpilih">×</button></div><div class="state-note" id="preflight-note"><span class="dot"></span>Pemeriksaan struktur saja; belum membaca tabel RAB atau menjalankan OCR.</div><div class="state-actions"><button class="primary" id="preflight" type="button">Periksa PDF <span>→</span></button><button class="secondary" id="local-ocr" type="button" hidden>OCR Lokal</button><p class="limit" id="preflight-help">File dikirim untuk diperiksa, lalu langsung dibuang.</p><p class="limit" id="ocr-progress" role="status" hidden></p></div></div>
+<div id="chosen" class="file-state" hidden><div class="file-row"><div class="fileicon"><svg viewBox="0 0 32 36" aria-hidden="true"><path d="M5 1.5h14l8 8V32a2.5 2.5 0 0 1-2.5 2.5h-19A2.5 2.5 0 0 1 3 32V4a2.5 2.5 0 0 1 2-2.5Z" fill="#fff" stroke="currentColor" stroke-width="1.5"/><path d="M19 1.5v8h8" fill="#eef5f0" stroke="currentColor" stroke-width="1.5"/><path d="M8 19h13M8 23.5h13M8 28h9" stroke="#638574" stroke-width="1.7" stroke-linecap="round"/></svg></div><div class="meta"><span class="kicker">PDF DIPILIH</span><strong class="filename" id="filename"></strong><span class="size" id="filesize"></span></div><button class="remove" id="remove" aria-label="Ganti atau hapus file terpilih">×</button></div><div class="state-note" id="preflight-note"><span class="dot"></span>Pemeriksaan struktur saja; belum membaca tabel RAB atau menjalankan OCR.</div><div class="state-actions"><button class="primary" id="preflight" type="button">Periksa PDF <span>→</span></button><button class="secondary" id="local-ocr" type="button" hidden>OCR Lokal</button><button class="export-button" id="convert-xlsx" type="button" hidden>Konversi &amp; Unduh Excel</button><p class="limit" id="preflight-help">File dikirim untuk diperiksa, lalu langsung dibuang.</p><p class="limit" id="ocr-progress" role="status" hidden></p></div></div>
 <input class="hidden" id="file" type="file" accept="application/pdf,.pdf" aria-label="Pilih dokumen PDF RAB"><p class="err" id="err" role="alert" hidden></p>
 </section>
 <div class="reassure"><div class="item"><span style="color:#38815b;font-size:17px">↗</span>Excel bisa diedit</div><span class="separator"></span><div class="item"><span class="check">✓</span>Kurangi input manual</div><span class="separator"></span><div class="item"><span class="check">✓</span>Periksa hasil sebelum dipakai</div></div>
 </main><footer><span>© 2026 RabConverter</span><span class="footnote">Dibuat untuk pekerjaan RAB yang lebih praktis.</span></footer></div>
 <script>
-const input=document.getElementById('file'),card=document.getElementById('card'),empty=document.getElementById('empty'),chosen=document.getElementById('chosen'),err=document.getElementById('err'),preflight=document.getElementById('preflight'),localOcr=document.getElementById('local-ocr'),ocrProgress=document.getElementById('ocr-progress'),note=document.getElementById('preflight-note'),help=document.getElementById('preflight-help');
+const input=document.getElementById('file'),card=document.getElementById('card'),empty=document.getElementById('empty'),chosen=document.getElementById('chosen'),err=document.getElementById('err'),preflight=document.getElementById('preflight'),localOcr=document.getElementById('local-ocr'),convertXlsx=document.getElementById('convert-xlsx'),ocrProgress=document.getElementById('ocr-progress'),note=document.getElementById('preflight-note'),help=document.getElementById('preflight-help');
 const PREFLIGHT_URL='https://zkcziucjogprfzhjuaex.supabase.co/functions/v1/preflight-rab';
 const MAX_BYTES=30*1024*1024;
-let selectedFile=null,pickerOpen=false,requestId=0,activeController=null,busy=false,ocrBusy=false,ocrAbortController=null,ocrNotice='';
+let selectedFile=null,pickerOpen=false,requestId=0,activeController=null,busy=false,ocrBusy=false,ocrAbortController=null,ocrNotice='',conversionBusy=false,conversionController=null,conversionNotice='',XLSX=null;
 let pageReports=[],lastPreflightResult=null,nextStartPage=1;
 input.addEventListener('cancel',()=>{pickerOpen=false});
 function showError(message){err.textContent=message;err.hidden=false}
@@ -82,8 +83,15 @@ function resetFile(){
   activeController=null;
   ocrAbortController?.abort();
   ocrAbortController=null;
+  conversionController?.abort();
+  conversionController=null;
   busy=false;
   ocrBusy=false;
+  conversionBusy=false;
+  conversionNotice='';
+  convertXlsx.hidden=true;
+  convertXlsx.disabled=false;
+  convertXlsx.textContent='Konversi & Unduh Excel';
   selectedFile=null;
   pageReports=[];
   ocrNotice='';
@@ -205,8 +213,14 @@ function renderSummary(totalPages){
   if(summary.truncatedPages.length)details+=' · teks dibatasi pada '+summary.truncatedPages.length+' halaman';
   if(ocrNotice)details+=' · '+ocrNotice;
   help.textContent=details+'. OCR memproses scan di perangkat; PDF/teks OCR tidak dikirim ke layanan OCR.';
-  localOcr.hidden=summary.pagesNeedingOcr.length===0||ocrBusy;
+  if(conversionNotice)details+=' · '+conversionNotice;
+  help.textContent=details+'. OCR memproses scan di perangkat; PDF/teks OCR tidak dikirim ke layanan OCR.';
+  localOcr.hidden=summary.pagesNeedingOcr.length===0||ocrBusy||conversionBusy;
   if(!localOcr.hidden)localOcr.textContent='OCR Lokal · Halaman '+summary.pagesNeedingOcr.slice(0,5).join(', ');
+  const hasCompleteReview=Boolean(lastPreflightResult&&lastPreflightResult.nextStartPage===null&&pageReports.length===totalPages);
+  convertXlsx.hidden=!hasCompleteReview;
+  convertXlsx.disabled=conversionBusy||ocrBusy||busy||totalPages>50;
+  convertXlsx.textContent=conversionBusy?'Menyusun Excel…':totalPages>50?'Konversi beta: maks. 50 halaman':'Konversi & Unduh Excel';
 }
 function classifyLocalText(extractedText,ocrAttempted){
   const text=String(extractedText||'').trim();
@@ -229,6 +243,176 @@ function classifyLocalText(extractedText,ocrAttempted){
   if(score>=6&&signals.length>=2&&structural)return {status:'LIKELY_RAB',score,signals,reasons:['rab_signals_and_cost_structure_detected']};
   if(score>=3)return {status:'NEEDS_CONFIRMATION',score,signals,reasons:[structural?'classification_score_needs_confirmation':'cost_structure_not_strong_enough_for_auto_accept']};
   return {status:'NOT_RAB',score,signals,reasons:['insufficient_rab_boq_evidence']};
+}
+
+function cellsFromPositioned(items){
+  const positioned=[];
+  for(const item of items||[]){
+    const text=typeof item.str==='string'?item.str.replace(/\u0000/g,'').trim():'';
+    const transform=Array.isArray(item.transform)?item.transform:[];
+    if(!text||transform.length<6)continue;
+    const x0=Number(transform[4]),baseline=Number(transform[5]),height=Math.abs(Number(item.height)||Number(transform[3])||9),width=Math.abs(Number(item.width)||Math.max(1,text.length*height*.45));
+    if(!Number.isFinite(x0)||!Number.isFinite(baseline))continue;
+    positioned.push({text,x0,y:baseline,x1:x0+width,height});
+  }
+  positioned.sort((a,b)=>b.y-a.y||a.x0-b.x0);
+  const lines=[];
+  for(const item of positioned){
+    const current=lines[lines.length-1],tolerance=Math.max(2.5,Math.min(7,item.height*.45));
+    if(!current||Math.abs(current.y-item.y)>tolerance)lines.push({y:item.y,height:item.height,items:[item]});
+    else{const count=current.items.length;current.y=(current.y*count+item.y)/(count+1);current.height=(current.height*count+item.height)/(count+1);current.items.push(item)}
+  }
+  return lines.map(line=>{
+    line.items.sort((a,b)=>a.x0-b.x0);const cells=[];let cell='',lastRight=0;
+    for(const item of line.items){
+      if(cell&&item.x0-lastRight>Math.max(8,line.height*1.3)){cells.push(cell.trim());cell=''}
+      cell+=(cell?' ':'')+item.text;lastRight=Math.max(lastRight,item.x1);
+    }
+    if(cell.trim())cells.push(cell.trim());
+    return cells.flatMap(value=>{const split=value.split(/\s{2,}/).map(part=>part.trim()).filter(Boolean);return split.length>1?split:[value]}).filter(Boolean);
+  }).filter(row=>row.length);
+}
+function cellsFromOcrWords(words,fallbackText){
+  const positioned=(words||[]).filter(word=>word&&typeof word.text==='string'&&word.text.trim()&&word.bbox).map(word=>({text:word.text.trim(),x0:Number(word.bbox.x0),y0:Number(word.bbox.y0),x1:Number(word.bbox.x1),y1:Number(word.bbox.y1)})).filter(word=>Number.isFinite(word.x0)&&Number.isFinite(word.y0)&&word.x1>=word.x0);
+  if(!positioned.length)return String(fallbackText||'').split(/\r?\n/).map(line=>line.trim()).filter(Boolean).map(line=>[line]);
+  positioned.sort((a,b)=>(a.y0+a.y1)/2-(b.y0+b.y1)/2||a.x0-b.x0);const lines=[];
+  for(const word of positioned){const center=(word.y0+word.y1)/2,height=Math.max(1,word.y1-word.y0),current=lines[lines.length-1];if(!current||Math.abs(center-current.center)>Math.max(5,Math.min(16,height*.55)))lines.push({center,height,words:[word]});else{const count=current.words.length;current.center=(current.center*count+center)/(count+1);current.height=(current.height*count+height)/(count+1);current.words.push(word)}}
+  return lines.map(line=>{line.words.sort((a,b)=>a.x0-b.x0);const cells=[];let cell='',lastRight=0;for(const word of line.words){if(cell&&word.x0-lastRight>Math.max(6,line.height*.3)){cells.push(cell.trim());cell=''}cell+=(cell?' ':'')+word.text;lastRight=Math.max(lastRight,word.x1)}if(cell.trim())cells.push(cell.trim());return cells}).filter(row=>row.length);
+}
+function parseNumber(value){
+  let text=String(value||'').trim().replace(/^(?:rp|idr)\s*/i,'').replace(/\s/g,'');const negative=text.startsWith('(')&&text.endsWith(')');text=text.replace(/[()]/g,'');if(!/^[+-]?\d+(?:[.,]\d+)*$/.test(text))return null;
+  const dots=(text.match(/\./g)||[]).length,commas=(text.match(/,/g)||[]).length;
+  if(dots&&commas){if(text.lastIndexOf(',')>text.lastIndexOf('.'))text=text.replace(/\./g,'').replace(',','.');else text=text.replace(/,/g,'')}
+  else if(commas){const parts=text.split(',');text=parts.length>2||parts[parts.length-1].length===3?parts.join(''):parts.slice(0,-1).join('')+'.'+parts[parts.length-1]}
+  else if(dots){const parts=text.split('.');if(parts.length>2||parts[parts.length-1].length===3)text=parts.join('')}
+  const result=Number(text);return Number.isFinite(result)?(negative?-result:result):null;
+}
+function norm(value){return String(value||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim()}
+function headerMap(cells){
+  const map={};cells.forEach((cell,index)=>{const v=norm(cell);if(/^(no|nomor|no urut|item)$/.test(v))map.no=index;else if(/uraian|deskripsi|description|jenis pekerjaan|nama pekerjaan/.test(v))map.desc=index;else if(/^(volume|qty|quantity|kuantitas)$/.test(v))map.volume=index;else if(/^(satuan|unit|uom)$/.test(v))map.unit=index;else if(/harga satuan|unit price|tarif satuan/.test(v))map.price=index;else if(/jumlah harga|total harga|amount|total biaya|jumlah biaya/.test(v))map.amount=index});
+  return new Set(Object.entries(map).filter(([key])=>key!=='no').map(([,index])=>index)).size>=2?map:null;
+}
+
+function inferRABRow(cells,itemIndex){
+  const raw=String((cells||[]).join(' ')).replace(/\|/g,' ').replace(/\s+/g,' ').trim();
+  if(!raw||!/[A-Za-zÀ-ÖØ-öø-ÿ]{3,}/.test(raw))return null;
+  const tokens=raw.split(/\s+/),numeric=[];
+  tokens.forEach((token,index)=>{const clean=token.replace(/^[()[\]{}]+|[()[\]{}.,;:]+$/g,'');const value=parseNumber(clean);if(value!==null)numeric.push({index,value,raw:clean})});
+  if(numeric.length<2)return null;
+  const leadingSerial=numeric.length>=3&&numeric[0].index===0&&/^\d{1,4}$/.test(numeric[0].raw)&&tokens.slice(1,numeric[1].index).some(token=>/[A-Za-zÀ-ÖØ-öø-ÿ]{3,}/.test(token));
+  const values=leadingSerial?numeric.slice(1):numeric;
+  if(values.length<2)return null;
+  const volumeToken=values[0],priceToken=values.length>=3?values[1]:null,amountToken=values.length>=3?values[2]:values[1];
+  const descriptionStart=leadingSerial?1:0,description=tokens.slice(descriptionStart,volumeToken.index).join(' ').trim();
+  const unitEnd=priceToken?priceToken.index:amountToken.index;
+  const unit=tokens.slice(volumeToken.index+1,unitEnd).join(' ').replace(/[|,;]+$/g,'').trim();
+  if(!description)return null;
+  return [leadingSerial?numeric[0].value:itemIndex,description,volumeToken.value,unit,priceToken?priceToken.value:'',amountToken.value];
+}
+function lastNumberInLine(cells){
+  const raw=String((cells||[]).join(' ')).replace(/\|/g,' ').replace(/\s+/g,' ').trim();
+  const tokens=raw.split(/\s+/);
+  for(let index=tokens.length-1;index>=0;index--){const clean=tokens[index].replace(/^[()[\]{}]+|[()[\]{}.,;:]+$/g,'');const value=parseNumber(clean);if(value!==null)return value}
+  return '';
+}
+
+function downloadWorkbook(sourceRows,totalPages,scannedPages,fileName){
+  const structured=[],source=[['Halaman','Baris','Teks sumber']],headers=['No','Uraian Pekerjaan','Volume','Satuan','Harga Satuan (Rp)','Jumlah Harga (Rp)'];let mapping=null,itemNo=0;
+  const rawRows=sourceRows.sort((a,b)=>a.pageNumber-b.pageNumber||a.lineNumber-b.lineNumber);
+  for(const row of rawRows){
+    source.push([row.pageNumber,row.lineNumber,row.cells.join(' | ')]);
+    const found=headerMap(row.cells);if(found){mapping=found;continue}
+    const text=norm(row.cells.join(' '));
+    if(/^(grand total|terbilang|dibuat oleh|disetujui oleh|tanggal|halaman)\b/.test(text))continue;
+    if(/^(subtotal|sub total|jumlah akhir|ppn|pajak|pembulatan|total biaya|total harga)\b/.test(text)){const amount=lastNumberInLine(row.cells);structured.push(['',row.cells.find(value=>/[A-Za-zÀ-ÖØ-öø-ÿ]{3,}/.test(value))||text,'','','',amount]);continue}
+    if(!/[A-Za-zÀ-ÖØ-öø-ÿ]{3,}/.test(row.cells.join(' ')))continue;
+    let inferred=inferRABRow(row.cells,itemNo+1),mapped=null;
+    if(mapping&&mapping.desc!==undefined&&mapping.desc<row.cells.length){
+      const no=mapping.no===undefined?'':row.cells[mapping.no]||'';
+      const desc=row.cells[mapping.desc]||'';
+      const volume=row.cells[mapping.volume]||'';
+      const unit=row.cells[mapping.unit]||'';
+      const price=row.cells[mapping.price]||'';
+      const amount=row.cells[mapping.amount]||'';
+      if(desc&&(volume||price||amount))mapped=[parseNumber(no)??no,desc,parseNumber(volume)??volume,unit,parseNumber(price)??price,parseNumber(amount)??amount];
+    }
+    const selected=mapped||inferred;
+    if(!selected)continue;
+    const [no,desc,volume,unit,price,amount]=selected;
+    const numberVolume=parseNumber(String(volume)),numberPrice=parseNumber(String(price)),numberAmount=parseNumber(String(amount));
+    itemNo++;structured.push([parseNumber(String(no)) ?? (no || itemNo),desc,numberVolume ?? volume,unit,numberPrice ?? price,numberAmount ?? amount]);
+  }
+  const rab=[headers,...structured];
+  const formulas=[];
+  structured.forEach((row,index)=>{const v=parseNumber(row[2]),p=parseNumber(row[4]);if((row[5]===''||row[5]===null)&&v!==null&&p!==null){const xrow=index+2;rab[xrow-1][5]=null;formulas.push({cell:'F'+xrow,formula:'C'+xrow+'*E'+xrow,value:v*p})}});
+  if(structured.length){const totalRow=rab.length+1;rab.push(['','TOTAL HASIL KONVERSI','','','',null]);formulas.push({cell:'F'+totalRow,formula:'SUM(F2:F'+(structured.length+1)+')',value:structured.reduce((sum,row)=>sum+(parseNumber(row[5])||0),0)})}
+  const info=[['RabConverter — Ringkasan Konversi'],['Nama file',fileName],['Halaman diproses',totalPages],['Halaman yang memerlukan OCR',scannedPages],['Baris tabel terdeteksi',structured.length],['Catatan','Periksa ulang angka, satuan, volume, harga, dan total terhadap PDF asli. Ini hasil rekonstruksi otomatis.']];
+  const workbook=XLSX.utils.book_new(),wsRab=XLSX.utils.aoa_to_sheet(rab),wsSource=XLSX.utils.aoa_to_sheet(source),wsInfo=XLSX.utils.aoa_to_sheet(info);
+  for(const item of formulas)wsRab[item.cell]={t:'n',f:item.formula,v:item.value};
+  wsRab['!cols']=[{wch:7},{wch:48},{wch:13},{wch:12},{wch:20},{wch:22}];wsSource['!cols']=[{wch:10},{wch:10},{wch:110}];wsInfo['!cols']=[{wch:30},{wch:110}];
+  XLSX.utils.book_append_sheet(workbook,wsRab,'Tabel RAB');XLSX.utils.book_append_sheet(workbook,wsSource,'Teks Sumber');XLSX.utils.book_append_sheet(workbook,wsInfo,'Ringkasan');
+  const output=XLSX.write(workbook,{bookType:'xlsx',type:'array'}),blob=new Blob([output],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+  const base=fileName.replace(/\.pdf$/i,'').replace(/[^a-z0-9._ -]+/gi,'').trim()||'rab-converted';a.href=url;a.download=base+'.xlsx';a.style.display='none';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+  return {structuredCount:structured.length,sourceCount:sourceRows.length};
+}
+async function convertAndDownloadExcel(){
+  if(!selectedFile||busy||ocrBusy||conversionBusy||!lastPreflightResult||lastPreflightResult.nextStartPage!==null||pageReports.length!==lastPreflightResult.pageCount)return;
+  if(lastPreflightResult.pageCount>50){showError('Konversi beta dibatasi maksimal 50 halaman per file.');return}
+  conversionBusy=true;conversionNotice='';conversionController=new AbortController();const id=++requestId,signal=conversionController.signal;
+  const setProgress=(value)=>{ocrProgress.hidden=false;ocrProgress.textContent=value};
+  preflight.disabled=true;localOcr.disabled=true;convertXlsx.disabled=true;convertXlsx.textContent='Menyusun Excel…';err.hidden=true;
+  try{
+    setProgress('Menyiapkan pembuat file Excel…');
+    const xlsxImport=await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm');
+    XLSX=xlsxImport.default||xlsxImport;
+    setProgress('Membuka PDF dan mengekstrak susunan tabel…');
+    const pdfjs=await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/build/pdf.mjs');
+    pdfjs.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/build/pdf.worker.mjs';
+    const task=pdfjs.getDocument({data:new Uint8Array(await selectedFile.arrayBuffer()),useWorkerFetch:false});const pdf=await task.promise;
+    if(pdf.numPages>50)throw new Error('Konversi beta dibatasi maksimal 50 halaman per file.');
+    const sourceRows=[],scanPages=[];let ocrWorker=null,workerTerminated=false;
+    const terminateWorker=async()=>{if(ocrWorker&&!workerTerminated){workerTerminated=true;await ocrWorker.terminate()}};
+    try{
+      for(let n=1;n<=pdf.numPages;n++){
+        if(signal.aborted)throw new DOMException('Konversi dibatalkan.','AbortError');
+        setProgress('Mengekstrak susunan teks halaman '+n+' dari '+pdf.numPages+'…');
+        const pg=await pdf.getPage(n);
+        try{
+          const content=await pg.getTextContent(),items=content.items||[],hasText=items.some(item=>typeof item.str==='string'&&item.str.trim());
+          let rows=[];
+          if(hasText){const viewport=pg.getViewport({scale:1});rows=cellsFromPositioned(items.map(item=>({...item,transform:[...item.transform.slice(0,4),item.transform[4],viewport.height-item.transform[5]]})))}
+          if(hasText)rows.forEach((cells,i)=>sourceRows.push({pageNumber:n,lineNumber:i+1,cells}));
+          else{
+            scanPages.push(n);const cached=pageReports.find(page=>page.pageNumber===n&&page.ocrAttempted&&Array.isArray(page.rows));
+            if(cached)cached.rows.forEach((cells,i)=>sourceRows.push({pageNumber:n,lineNumber:i+1,cells}));
+          }
+        }finally{pg.cleanup()}
+      }
+      const missing=scanPages.filter(n=>!pageReports.some(page=>page.pageNumber===n&&page.ocrAttempted&&Array.isArray(page.rows)));
+      if(missing.length){
+        setProgress('Menyiapkan mesin OCR untuk '+missing.length+' halaman scan…');
+        const tess=await import('https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/+esm');
+        ocrWorker=await tess.createWorker('ind+eng',1,{workerPath:'https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/worker.min.js',logger:event=>{if(id===requestId&&!signal.aborted&&String(event.status||'').toLowerCase().includes('recogniz'))setProgress('OCR otomatis '+Math.round((event.progress||0)*100)+'%')}});if(signal.aborted)throw new DOMException('Konversi dibatalkan.','AbortError');
+        for(const n of missing){
+          setProgress('Membaca scan halaman '+n+' dengan OCR lokal…');const pg=await pdf.getPage(n),canvas=document.createElement('canvas');
+          try{
+            const base=pg.getViewport({scale:1}),scale=Math.min(2,Math.sqrt(4000000/(base.width*base.height)),3000/Math.max(base.width,base.height));if(!Number.isFinite(scale)||scale<.35)throw new Error('Ukuran halaman terlalu besar untuk OCR yang aman.');
+            const viewport=pg.getViewport({scale});canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);const ctx=canvas.getContext('2d',{alpha:false});if(!ctx)throw new Error('Browser tidak dapat menyiapkan OCR.');
+            ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);await pg.render({canvas,canvasContext:ctx,viewport,background:'#ffffff'}).promise;
+            const recognized=await ocrWorker.recognize(canvas),rawText=String(recognized.data.text||'').trim(),text=rawText.slice(0,20000),rows=cellsFromOcrWords(recognized.data.words||[],text);
+            rows.forEach((cells,i)=>sourceRows.push({pageNumber:n,lineNumber:i+1,cells}));
+            pageReports=pageReports.map(report=>report.pageNumber===n?{...report,textChars:text.length,textFound:text.length>0,ocrAttempted:true,rows,text,classification:classifyLocalText(text,true)}:report);
+          }finally{pg.cleanup();canvas.width=0;canvas.height=0}
+        }
+      }
+      if(signal.aborted)throw new DOMException('Konversi dibatalkan.','AbortError');
+      setProgress('Menyusun workbook Excel dengan tabel dan teks sumber…');
+      const result=await downloadWorkbook(sourceRows,pdf.numPages,scanPages.length,selectedFile.name);
+      conversionNotice='File Excel berhasil diunduh. '+pdf.numPages+' halaman diproses; '+scanPages.length+' halaman scan; '+result.structuredCount+' baris tabel; '+result.sourceCount+' baris sumber ditemukan. Periksa sheet Teks Sumber dan cocokkan angka dengan PDF asli.';
+      renderSummary(pdf.numPages);setProgress('Konversi selesai. File Excel sudah diunduh; tetap periksa angka dan tabel hasilnya.');
+    }finally{await terminateWorker().catch(()=>undefined);await task.destroy().catch(()=>undefined)}
+  }catch(error){if(id===requestId&&!signal.aborted)showError(error&&error.message?'Konversi gagal: '+error.message:'Konversi gagal. Coba PDF lain.')}
+  finally{if(id===requestId){conversionBusy=false;conversionController=null;preflight.disabled=false;localOcr.disabled=false;const complete=Boolean(lastPreflightResult&&lastPreflightResult.nextStartPage===null&&pageReports.length===lastPreflightResult.pageCount);convertXlsx.hidden=!complete;convertXlsx.disabled=!complete||lastPreflightResult.pageCount>50;convertXlsx.textContent=lastPreflightResult&&lastPreflightResult.pageCount>50?'Konversi beta: maks. 50 halaman':'Konversi & Unduh Excel';}}
 }
 async function runPreflight(){
   if(!selectedFile||busy||ocrBusy)return;
@@ -276,6 +460,7 @@ async function runPreflight(){
       if(!lastPreflightResult)setPreflightLabel('Periksa PDF');
       else if(lastPreflightResult.nextStartPage===null)setPreflightLabel('Ulangi Pemeriksaan');
       else setPreflightLabel('Periksa Halaman Berikutnya');
+      if(lastPreflightResult)renderSummary(lastPreflightResult.pageCount);
     }
   }
 }
@@ -334,8 +519,8 @@ async function runLocalOcr(){
         setProgress('Mengenali teks halaman '+pageNumber+'…');
         const recognized=await ocrWorker.recognize(canvas);
         throwIfAborted();
-        const rawText=String(recognized.data.text||'').trim();const text=rawText.slice(0,20000);
-        recognizedReports.push({pageNumber,textChars:text.length,textFound:text.length>0,truncated:rawText.length>20000,ocrAttempted:true,classification:classifyLocalText(text,true)});
+        const rawText=String(recognized.data.text||'').trim();const text=rawText.slice(0,20000),rows=cellsFromOcrWords(recognized.data.words||[],text);
+        recognizedReports.push({pageNumber,textChars:text.length,textFound:text.length>0,truncated:rawText.length>20000,ocrAttempted:true,classification:classifyLocalText(text,true),text,rows});
       }finally{page.cleanup();canvas.width=0;canvas.height=0}
     }
     if(id!==requestId||controller.signal.aborted)return;
@@ -355,6 +540,7 @@ async function runLocalOcr(){
       localOcr.hidden=summary.pagesNeedingOcr.length===0;
       if(!localOcr.hidden)localOcr.textContent='OCR Lokal · Halaman '+summary.pagesNeedingOcr.slice(0,5).join(', ');
       ocrProgress.hidden=false;
+      if(lastPreflightResult)renderSummary(lastPreflightResult.pageCount);
     }
   }
 }
@@ -363,6 +549,7 @@ input.addEventListener('change',event=>{pickerOpen=false;showFile(event.target.f
 document.getElementById('remove').addEventListener('click',resetFile);
 preflight.addEventListener('click',runPreflight);
 localOcr.addEventListener('click',runLocalOcr);
+convertXlsx.addEventListener('click',convertAndDownloadExcel);
 card.addEventListener('dragover',event=>{event.preventDefault();card.classList.add('drag')});
 card.addEventListener('dragleave',()=>card.classList.remove('drag'));
 card.addEventListener('drop',event=>{event.preventDefault();card.classList.remove('drag');showFile(event.dataTransfer.files[0])});
