@@ -441,7 +441,12 @@ input.addEventListener('change',event=>{pickerOpen=false;showFile(event.target.f
 document.getElementById('remove').addEventListener('click',resetFile);
 preflight.addEventListener('click',runPreflight);
 localOcr.addEventListener('click',runLocalOcr);
-convertXlsx.addEventListener('click',convertAndDownloadExcel);
+document.addEventListener('click',event=>{
+  const target=event.target instanceof Element?event.target.closest('#convert-xlsx'):null;
+  if(!target)return;
+  event.preventDefault();
+  void convertAndDownloadExcel();
+});
 card.addEventListener('dragover',event=>{event.preventDefault();card.classList.add('drag')});
 card.addEventListener('dragleave',()=>card.classList.remove('drag'));
 card.addEventListener('drop',event=>{event.preventDefault();card.classList.remove('drag');showFile(event.dataTransfer.files[0])});
