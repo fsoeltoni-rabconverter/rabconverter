@@ -42,6 +42,8 @@ export interface RabPageTextResult {
   textChars: number;
   textFound: boolean;
   truncated: boolean;
+  /** True once browser-local OCR has been attempted for this page. */
+  ocrAttempted?: boolean;
   classification: RabClassificationResult;
 }
 
@@ -49,6 +51,7 @@ export interface RabDocumentSummary extends RabClassificationResult {
   complete: boolean;
   pagesReviewed: number;
   pagesNeedingOcr: number[];
+  pagesUnreadableAfterOcr: number[];
   truncatedPages: number[];
   structuralCostEvidence: boolean;
 }
