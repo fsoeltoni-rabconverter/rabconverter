@@ -427,6 +427,7 @@ async function runPreflight(){
       if(!lastPreflightResult)setPreflightLabel('Periksa PDF');
       else if(lastPreflightResult.nextStartPage===null)setPreflightLabel('Ulangi Pemeriksaan');
       else setPreflightLabel('Periksa Halaman Berikutnya');
+      if(lastPreflightResult)renderSummary(lastPreflightResult.pageCount);
     }
   }
 }
@@ -506,6 +507,7 @@ async function runLocalOcr(){
       localOcr.hidden=summary.pagesNeedingOcr.length===0;
       if(!localOcr.hidden)localOcr.textContent='OCR Lokal · Halaman '+summary.pagesNeedingOcr.slice(0,5).join(', ');
       ocrProgress.hidden=false;
+      if(lastPreflightResult)renderSummary(lastPreflightResult.pageCount);
     }
   }
 }
