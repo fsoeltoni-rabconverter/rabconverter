@@ -61,7 +61,6 @@ export async function ocrPdfPages(
   assertNotAborted();
   const loadingTask = pdfjsLib.getDocument({
     data: bytes,
-    isEvalSupported: false,
     useWorkerFetch: false,
   });
 
@@ -138,6 +137,7 @@ export async function ocrPdfPages(
         context.fillStyle = "#ffffff";
         context.fillRect(0, 0, canvas.width, canvas.height);
         await page.render({
+          canvas,
           canvasContext: context,
           viewport,
           background: "#ffffff",
