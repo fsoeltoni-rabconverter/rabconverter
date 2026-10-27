@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { PDFDocument } from "pdf-lib";
-import { getDocumentProxy } from "unpdf";
+import { getResolvedPDFJS } from "unpdf";
 import { extractPageText } from "../supabase/functions/preflight-rab/pdf-text.js";
 import { classifyRabDocument, summarizeRabPageClassifications } from "../supabase/functions/preflight-rab/rab-classifier.js";
 import { hasPdfHeader, hasPdfTerminator } from "../supabase/functions/preflight-rab/pdf-envelope.js";
@@ -54,10 +54,13 @@ for (const fixtureId of fixtures) {
     const expected = JSON.parse(
       await readFile(new URL(`../fixtures/golden/expected/${fixtureId}.json`, import.meta.url), "utf8"),
     );
-    const pdf = await getDocumentProxy(pdfBytes, {
+    const pdfjs = await getResolvedPDFJS();
+    const loadingTask = pdfjs.getDocument({
+      data: pdfBytes,
       isEvalSupported: false,
       maxImageSize: 16_777_216,
     });
+    const pdf = await loadingTask.promise;
     const pages = [];
     const extractedPages = [];
 
@@ -100,7 +103,7 @@ for (const fixtureId of fixtures) {
       assert.equal(summary.complete, true);
       assert.equal(summary.pagesReviewed, expected.pages);
     } finally {
-      await pdf.destroy();
+      await loadingTask.destroy();
     }
   });
 }
