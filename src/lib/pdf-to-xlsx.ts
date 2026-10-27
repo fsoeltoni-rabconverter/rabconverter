@@ -179,51 +179,77 @@ function mappedValue(cells: string[], mapping: Map<keyof StandardRow, number> | 
   return (cells[mapping.get(key)!] ?? "").trim();
 }
 
-function looksLikeItemRow(cells: string[]) {
-  const rowText = cells.join(" ");
-  const hasWords = /[A-Za-zÀ-ÖØ-öø-ÿ]{3,}/.test(rowText);
-  const numericCells = cells.filter((cell) => parseIndonesianNumber(cell) !== null).length;
-  return hasWords && numericCells >= 1 && cells.length >= 3;
+
+function inferRowFromLine(cells: string[], fallbackIndex: number): StandardRow | null {
+  const raw = cells.join(" ").replace(/\|/g, " ").replace(/\s+/g, " ").trim();
+  if (!raw || !/[A-Za-zÀ-ÖØ-öø-ÿ]{3,}/.test(raw)) return null;
+  const tokens = raw.split(/\s+/);
+  const numeric: Array<{ index: number; value: number; raw: string }> = [];
+  tokens.forEach((token, index) => {
+    const cleaned = token.replace(/^[()[\]{}]+|[()[\]{}.,;:]+$/g, "");
+    const value = parseIndonesianNumber(cleaned);
+    if (value !== null) numeric.push({ index, value, raw: cleaned });
+  });
+  if (numeric.length < 2) return null;
+
+  const leadingSerial =
+    numeric.length >= 3 &&
+    numeric[0].index === 0 &&
+    /^\d{1,4}$/.test(numeric[0].raw) &&
+    tokens.slice(1, numeric[1].index).some((token) => /[A-Za-zÀ-ÖØ-öø-ÿ]{3,}/.test(token));
+  const values = leadingSerial ? numeric.slice(1) : numeric;
+  if (values.length < 2) return null;
+
+  const volumeToken = values[0];
+  const priceToken = values.length >= 3 ? values[1] : null;
+  const amountToken = values.length >= 3 ? values[2] : values[1];
+  const descriptionStart = leadingSerial ? 1 : 0;
+  const description = tokens.slice(descriptionStart, volumeToken.index).join(" ").trim();
+  const unitEnd = priceToken ? priceToken.index : amountToken.index;
+  const unit = tokens.slice(volumeToken.index + 1, unitEnd).join(" ").replace(/[|,;]+$/g, "").trim();
+  if (!description) return null;
+
+  return {
+    number: leadingSerial ? numeric[0].value : fallbackIndex,
+    description,
+    volume: volumeToken.value,
+    unit,
+    unitPrice: priceToken?.value ?? "",
+    amount: amountToken.value,
+    formulaAmount: false,
+  };
 }
 
-function standardizeRow(cells: string[], mapping: Map<keyof StandardRow, number> | null, fallbackIndex: number): StandardRow | null {
-  if (hasHeaderWords(cells) || cells.length < 3 || !looksLikeItemRow(cells)) return null;
+function standardizeRow(
+  cells: string[],
+  mapping: Map<keyof StandardRow, number> | null,
+  fallbackIndex: number,
+): StandardRow | null {
+  if (hasHeaderWords(cells)) return null;
 
-  let no = mappedValue(cells, mapping, "number");
-  let description = mappedValue(cells, mapping, "description");
-  let volume = mappedValue(cells, mapping, "volume");
-  let unit = mappedValue(cells, mapping, "unit");
-  let unitPrice = mappedValue(cells, mapping, "unitPrice");
-  let amount = mappedValue(cells, mapping, "amount");
-
-  if (!mapping) {
-    const offset = cells.length >= 6 && /^\d{1,4}[.)]?$/.test(cells[0]) && /[A-Za-zÀ-ÖØ-öø-ÿ]{3,}/.test(cells[1]) ? 1 : 0;
-    no = offset ? cells[0] : String(fallbackIndex);
-    description = cells[offset] ?? "";
-    volume = cells[offset + 1] ?? "";
-    unit = cells[offset + 2] ?? "";
-    unitPrice = cells[offset + 3] ?? "";
-    amount = cells[offset + 4] ?? "";
+  if (mapping && mapping.has("description")) {
+    const description = mappedValue(cells, mapping, "description");
+    const volume = mappedValue(cells, mapping, "volume");
+    const unit = mappedValue(cells, mapping, "unit");
+    const unitPrice = mappedValue(cells, mapping, "unitPrice");
+    const amount = mappedValue(cells, mapping, "amount");
+    if (description && (volume || unitPrice || amount)) {
+      const parsedVolume = parseIndonesianNumber(volume);
+      const parsedPrice = parseIndonesianNumber(unitPrice);
+      const parsedAmount = parseIndonesianNumber(amount);
+      return {
+        number: parseIndonesianNumber(mappedValue(cells, mapping, "number")) ?? mappedValue(cells, mapping, "number") || fallbackIndex,
+        description: description.trim(),
+        volume: parsedVolume ?? volume,
+        unit: unit.trim(),
+        unitPrice: parsedPrice ?? unitPrice,
+        amount: parsedAmount ?? amount,
+        formulaAmount: !amount && parsedVolume !== null && parsedPrice !== null,
+      };
+    }
   }
 
-  if (!description) {
-    const candidates = cells.filter((cell) => /[A-Za-zÀ-ÖØ-öø-ÿ]{3,}/.test(cell) && parseIndonesianNumber(cell) === null);
-    description = candidates[0] ?? cells[0] ?? "";
-  }
-  if (!description.trim()) return null;
-
-  const parsedVolume = parseIndonesianNumber(volume);
-  const parsedPrice = parseIndonesianNumber(unitPrice);
-  const parsedAmount = parseIndonesianNumber(amount);
-  return {
-    number: parseIndonesianNumber(no) ?? (no || fallbackIndex),
-    description: description.trim(),
-    volume: parsedVolume ?? volume,
-    unit: unit.trim(),
-    unitPrice: parsedPrice ?? unitPrice,
-    amount: parsedAmount ?? amount,
-    formulaAmount: !amount && parsedVolume !== null && parsedPrice !== null,
-  };
+  return inferRowFromLine(cells, fallbackIndex);
 }
 
 function workbookCellRows(sourceRows: SourceRow[], fileName: string, pageCount: number, scannedPages: number) {
