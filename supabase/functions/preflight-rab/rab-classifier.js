@@ -121,7 +121,12 @@ export function summarizeRabPageClassifications(pages, options = {}) {
   const complete = options.complete === true;
   const signals = [...new Set(pages.flatMap((page) => page.classification?.signals ?? []))];
   const score = signals.reduce((sum, key) => sum + (SIGNAL_SCORES.get(key) ?? (key === "repeated_item_rows" ? 2 : 0)), 0);
-  const pagesNeedingOcr = pages.filter((page) => page.textFound === false || page.textChars === 0).map((page) => page.pageNumber);
+  const pagesNeedingOcr = pages
+    .filter((page) => page.ocrAttempted !== true && (page.textFound === false || page.textChars === 0))
+    .map((page) => page.pageNumber);
+  const pagesUnreadableAfterOcr = pages
+    .filter((page) => page.ocrAttempted === true && (page.textFound === false || page.textChars === 0))
+    .map((page) => page.pageNumber);
   const truncatedPages = pages.filter((page) => page.truncated).map((page) => page.pageNumber);
   const hasDescription = signals.includes("item_description");
   const hasQuantityOrUnit = signals.includes("quantity_or_unit");
@@ -143,6 +148,9 @@ export function summarizeRabPageClassifications(pages, options = {}) {
   } else if (pagesNeedingOcr.length > 0 && complete) {
     status = "NEEDS_OCR";
     reasons = ["one_or_more_pages_have_no_extractable_text"];
+  } else if (pagesUnreadableAfterOcr.length > 0 && complete) {
+    status = "UNREADABLE_PDF";
+    reasons = ["one_or_more_pages_have_no_text_after_local_ocr"];
   } else if (!complete) {
     status = "NEEDS_MORE_PAGES";
     reasons = ["insufficient_evidence_in_pages_reviewed_so_far"];
@@ -159,6 +167,7 @@ export function summarizeRabPageClassifications(pages, options = {}) {
     complete,
     pagesReviewed: pages.length,
     pagesNeedingOcr,
+    pagesUnreadableAfterOcr,
     truncatedPages,
     structuralCostEvidence,
   };
