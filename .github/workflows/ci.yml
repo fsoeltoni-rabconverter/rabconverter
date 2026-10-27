@@ -30,6 +30,8 @@ jobs:
         run: npm run test:preflight
       - name: Server PDF parser tests
         run: npm run test:server-pdf
+      - name: AI extraction and workbook tests
+        run: npm run test:rab-ai-core
       - name: Typecheck
         run: npm run typecheck
       - name: Build
