@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { classifyRabDocument, summarizeRabPageClassifications, validatePdfFile, type RabPageTextResult } from "./lib/preflight.js";
 import { MAX_OCR_PAGES_PER_RUN, ocrPdfPages, type LocalOcrPageResult, type LocalOcrProgress } from "./lib/local-ocr.js";
-import { MAX_CONVERSION_PAGES, convertPdfToXlsx, type ConversionProgress } from "./lib/pdf-to-xlsx.js";
+import { AiConversionError, requestAiRabConversion } from "./lib/ai-conversion.js";
+import { downloadAiWorkbook } from "./lib/ai-workbook.js";
 
 const PREFLIGHT_ENDPOINT = import.meta.env.VITE_PREFLIGHT_URL?.trim()
   || "https://zkcziucjogprfzhjuaex.supabase.co/functions/v1/preflight-rab";
@@ -298,69 +299,41 @@ export default function App() {
   }
 
   async function runConversion() {
-    if (
-      !selectedFile ||
-      !preflightResult ||
-      !reviewComplete ||
-      preflightBusy ||
-      ocrBusy ||
-      conversionBusy
-    ) return;
+    if (!selectedFile || preflightBusy || ocrBusy || conversionBusy) return;
 
     const runId = ++conversionRunRef.current;
     const controller = new AbortController();
     conversionAbortRef.current = controller;
     setConversionBusy(true);
-    setConversionProgressText("Menyiapkan konversi lokal…");
+    setConversionProgressText("Menyiapkan AI multimodal untuk membaca tabel RAB…");
     setConversionNotice("");
     setMessage("");
 
-    const describeProgress = (progress: ConversionProgress) => {
-      if (progress.phase === "opening") {
-        setConversionProgressText("Membuka PDF di perangkat…");
-      } else if (progress.phase === "extracting-text") {
-        setConversionProgressText(progress.detail);
-      } else if (progress.phase === "ocr") {
-        setConversionProgressText(progress.detail);
-      } else {
-        setConversionProgressText("Menyusun file Excel…");
-      }
-    };
-
     try {
-      const result = await convertPdfToXlsx(selectedFile, {
+      const result = await requestAiRabConversion(selectedFile, {
         signal: controller.signal,
-        cachedOcrPages: ocrPages,
-        onProgress: describeProgress,
+        onProgress: (progress) => {
+          if (runId === conversionRunRef.current) setConversionProgressText(progress);
+        },
       });
       if (runId !== conversionRunRef.current || controller.signal.aborted) return;
 
-      const buffer = result.bytes.buffer.slice(
-        result.bytes.byteOffset,
-        result.bytes.byteOffset + result.bytes.byteLength,
-      ) as ArrayBuffer;
-      const blob = new Blob([buffer], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
-      const downloadUrl = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = downloadUrl;
-      anchor.download = result.fileName;
-      anchor.style.display = "none";
-      document.body.append(anchor);
-      anchor.click();
-      anchor.remove();
-      window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 30_000);
-
+      setConversionProgressText("Membuat workbook Excel dengan sheet bukti dan validasi…");
+      const downloaded = downloadAiWorkbook(result, selectedFile.name);
       setConversionNotice(
-        `File Excel berhasil dibuat: ${result.fileName}. ${result.pagesProcessed} halaman diproses; ${result.scannedPages} halaman menggunakan OCR; ${result.structuredRows} baris tabel dan ${result.sourceLines} baris sumber ditemukan. Periksa sheet Teks Sumber dan cocokkan angka dengan PDF asli sebelum dipakai.`,
+        `Excel AI berhasil dibuat: ${downloaded.fileName}. ${result.document.pageCount} halaman · ${result.quality.rowCount} baris diekstrak · ${result.quality.reviewCount} perlu review · ${result.quality.mismatchCount} mismatch hitungan. Periksa sheet Bukti AI dan Ringkasan sebelum menggunakan angka.`,
       );
       setConversionProgressText("");
     } catch (error) {
-      if (runId !== conversionRunRef.current || controller.signal.aborted || (error instanceof Error && error.name === "AbortError")) return;
-      setMessage(error instanceof Error
-        ? `Konversi gagal: ${error.message}`
-        : "Konversi gagal. Coba PDF yang lain.");
+      if (
+        runId !== conversionRunRef.current ||
+        controller.signal.aborted ||
+        (error instanceof Error && error.name === "AbortError")
+      ) return;
+
+      setMessage(error instanceof AiConversionError || error instanceof Error
+        ? error.message
+        : "Konversi AI gagal. File tidak dibuat; coba lagi nanti.");
       setConversionProgressText("");
     } finally {
       if (runId === conversionRunRef.current) {
@@ -501,18 +474,30 @@ export default function App() {
                 {conversionBusy && <span className="preflight-detail" role="status">{conversionProgressText}</span>}
                 {conversionNotice && <span className="preflight-detail">{conversionNotice}</span>}
               </div>
-              <button className="primary-button" type="button" onClick={runPreflight} disabled={preflightBusy || ocrBusy}>
-                <span>
-                  {preflightBusy
-                    ? "Membaca teks…"
-                    : ocrBusy
-                      ? "OCR lokal berjalan…"
-                      : preflightResult?.nextStartPage !== null && preflightResult
-                        ? "Periksa Halaman Berikutnya"
-                        : preflightResult
-                          ? "Ulangi Pemeriksaan"
-                          : "Periksa PDF"}
-                </span><ArrowIcon />
+              <button
+                className="export-button"
+                type="button"
+                onClick={runConversion}
+                disabled={preflightBusy || ocrBusy || conversionBusy}
+              >
+                {conversionBusy ? "AI sedang menyusun Excel…" : "Konversi dengan AI & Unduh Excel"}
+              </button>
+              <p className="preflight-detail">
+                PDF dikirim ke Google Gemini API untuk pemahaman dokumen multimodal. RabConverter tidak menyimpan PDF atau hasil ekstraksi secara permanen; kebijakan pemrosesan penyedia AI tetap berlaku.
+              </p>
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={runPreflight}
+                disabled={preflightBusy || ocrBusy || conversionBusy}
+              >
+                {preflightBusy
+                  ? "Memeriksa struktur PDF…"
+                  : preflightResult?.nextStartPage !== null && preflightResult
+                    ? "Periksa Halaman Berikutnya (opsional)"
+                    : preflightResult
+                      ? "Ulangi Pemeriksaan Struktur (opsional)"
+                      : "Periksa Struktur PDF (opsional)"}
               </button>
               {classificationSummary && classificationSummary.pagesNeedingOcr.length > 0 && (
                 <button
@@ -526,26 +511,15 @@ export default function App() {
                     : `OCR Lokal · Halaman ${classificationSummary.pagesNeedingOcr.slice(0, MAX_OCR_PAGES_PER_RUN).join(", ")}`}
                 </button>
               )}
-              {reviewComplete && (
-                <button
-                  className="export-button"
-                  type="button"
-                  onClick={runConversion}
-                  disabled={preflightBusy || ocrBusy || conversionBusy}
-                >
-                  {conversionBusy ? "Menyusun Excel…" : "Konversi & Unduh Excel"}
-                </button>
-              )}
+
               <p className="file-limit">
                 {preflightBusy
                   ? "Mengekstrak maksimal 5 halaman teks"
                   : ocrBusy
                     ? "OCR berjalan di perangkat · halaman scan saja · tanpa unggah gambar"
                     : conversionBusy
-                      ? conversionProgressText || "Mengekstrak tabel dan membuat file Excel di perangkat…"
-                      : reviewComplete
-                        ? `Siap konversi lokal · maksimal ${MAX_CONVERSION_PAGES} halaman · file tidak dikirim ke layanan konversi.`
-                        : "Periksa teks maksimal 5 halaman per tahap. OCR berjalan lokal, maksimal 5 halaman tiap proses."}
+                      ? conversionProgressText || "AI membaca dokumen dan menyiapkan file Excel…"
+                      : "Konversi AI membaca PDF secara multimodal; hasil sumber dan validasi disertakan di workbook."}
               </p>
             </div>
           )}
