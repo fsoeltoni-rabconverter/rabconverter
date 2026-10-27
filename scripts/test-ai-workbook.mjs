@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import * as XLSX from "xlsx";
 
-import { buildAiRabWorkbook } from "../src/lib/ai-workbook.ts";
+import { buildAiRabWorkbook } from "../src/lib/ai-workbook.js";
 
 test("AI workbook preserves source strings, numeric values, review flags, and source pages", () => {
   const output = buildAiRabWorkbook({
