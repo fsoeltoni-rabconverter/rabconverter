@@ -139,3 +139,41 @@ test("reports NEEDS_OCR when every reviewed page has no text after extraction", 
   assert.equal(result.status, "NEEDS_OCR");
   assert.deepEqual(result.pagesNeedingOcr, [1, 2]);
 });
+
+
+test("local OCR failure is not offered for OCR again and remains explicitly unreadable", () => {
+  const result = summarizeRabPageClassifications([{
+    pageNumber: 3,
+    textChars: 0,
+    textFound: false,
+    truncated: false,
+    ocrAttempted: true,
+    classification: classifyRabDocument("", { ocrAttempted: true }),
+  }], { complete: true });
+
+  assert.equal(result.status, "UNREADABLE_PDF");
+  assert.deepEqual(result.pagesNeedingOcr, []);
+  assert.deepEqual(result.pagesUnreadableAfterOcr, [3]);
+});
+
+test("text recovered from OCR can contribute RAB evidence to the same summary", () => {
+  const recognizedText = [
+    "RENCANA ANGGARAN BIAYA",
+    "Uraian Pekerjaan | Volume | Satuan | Harga Satuan | Jumlah Harga",
+    "Pekerjaan beton | 10 | m3 | 500000 | 5000000",
+    "Pekerjaan pasir | 2 | m3 | 300000 | 600000",
+  ].join("\\n");
+  const result = summarizeRabPageClassifications([{
+    pageNumber: 4,
+    textChars: recognizedText.length,
+    textFound: true,
+    truncated: false,
+    ocrAttempted: true,
+    classification: classifyRabDocument(recognizedText, { ocrAttempted: true }),
+  }], { complete: true });
+
+  assert.equal(result.status, "LIKELY_RAB");
+  assert.deepEqual(result.pagesNeedingOcr, []);
+  assert.deepEqual(result.pagesUnreadableAfterOcr, []);
+  assert.ok(result.signals.includes("rab_title"));
+});
