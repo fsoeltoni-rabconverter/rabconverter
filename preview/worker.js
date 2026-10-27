@@ -375,7 +375,7 @@ async function convertAndDownloadExcel(){
       if(signal.aborted)throw new DOMException('Konversi dibatalkan.','AbortError');
       setProgress('Menyusun workbook Excel dengan tabel dan teks sumber…');
       const result=await downloadWorkbook(sourceRows,pdf.numPages,scanPages.length,selectedFile.name);
-      conversionNotice='File Excel berhasil diunduh. '+pdf.numPages+' halaman diproses; '+scanPages.length+' halaman scan; '+result.structuredCount+' baris tabel terdeteksi. Periksa sheet Teks Sumber dan cocokkan angka dengan PDF asli.';
+      conversionNotice='File Excel berhasil diunduh. '+pdf.numPages+' halaman diproses; '+scanPages.length+' halaman scan; '+result.structuredCount+' baris tabel; '+result.sourceCount+' baris sumber ditemukan. Periksa sheet Teks Sumber dan cocokkan angka dengan PDF asli.';
       renderSummary(pdf.numPages);setProgress('Konversi selesai. File Excel sudah diunduh; tetap periksa angka dan tabel hasilnya.');
     }finally{await terminateWorker().catch(()=>undefined);await task.destroy().catch(()=>undefined)}
   }catch(error){if(id===requestId&&!signal.aborted)showError(error&&error.message?'Konversi gagal: '+error.message:'Konversi gagal. Coba PDF lain.')}
