@@ -29,7 +29,7 @@ test("parser rejects content that only imitates a PDF header", async () => {
 test("page-count guardrail distinguishes 201 pages from the 200-page limit", async () => {
   const generated = await PDFDocument.create();
   for (let page = 0; page < 201; page += 1) generated.addPage([200, 300]);
-  const saved = await generated.save({ updateFieldAppearances: false });
+  const saved = await generated.save();
   const parsed = await PDFDocument.load(saved, { updateMetadata: false });
   assert.equal(parsed.getPageCount(), 201);
   assert.ok(parsed.getPageCount() > 200);
