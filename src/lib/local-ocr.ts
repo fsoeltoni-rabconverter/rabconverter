@@ -79,7 +79,7 @@ function rowsFromOcrWords(words: OcrWord[], fallbackText: string): string[][] {
     let lastRight = 0;
     for (const word of line.words) {
       const gap = word.x0 - lastRight;
-      const threshold = Math.max(8, line.height * 0.45);
+      const threshold = Math.max(6, line.height * 0.3);
       if (currentCell && gap > threshold) {
         cells.push(currentCell.trim());
         currentCell = "";
