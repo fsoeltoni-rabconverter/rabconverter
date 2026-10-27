@@ -166,8 +166,12 @@ function findHeaderMapping(cells: string[]): Map<keyof StandardRow, number> | nu
     else if (/harga satuan|unit price|tarif satuan/.test(value)) mapping.set("unitPrice", index);
     else if (/jumlah harga|total harga|amount|total biaya|jumlah biaya/.test(value)) mapping.set("amount", index);
   }
-  const recognized = [...mapping.keys()].filter((key) => key !== "number").length;
-  return recognized >= 2 ? mapping : null;
+  const recognizedColumns = new Set(
+    [...mapping.entries()]
+      .filter(([key]) => key !== "number")
+      .map(([, index]) => index),
+  );
+  return recognizedColumns.size >= 2 ? mapping : null;
 }
 
 function hasHeaderWords(cells: string[]) {
@@ -238,7 +242,7 @@ function standardizeRow(
       const parsedPrice = parseIndonesianNumber(unitPrice);
       const parsedAmount = parseIndonesianNumber(amount);
       return {
-        number: parseIndonesianNumber(mappedValue(cells, mapping, "number")) ?? mappedValue(cells, mapping, "number") || fallbackIndex,
+        number: parseIndonesianNumber(mappedValue(cells, mapping, "number")) ?? (mappedValue(cells, mapping, "number") || fallbackIndex),
         description: description.trim(),
         volume: parsedVolume ?? volume,
         unit: unit.trim(),
