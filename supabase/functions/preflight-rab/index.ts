@@ -233,7 +233,7 @@ Deno.serve(async (request: Request) => {
     !Number.isSafeInteger(requestedStartPage) ||
     requestedStartPage < 1 ||
     requestedStartPage > MAX_PDF_PAGES ||
-    (requestedStartHeader !== null && !/^\\d+$/.test(requestedStartHeader))
+    (requestedStartHeader !== null && !/^\d+$/.test(requestedStartHeader))
   ) {
     return errorResponse(
       "INVALID_PAGE_RANGE",
