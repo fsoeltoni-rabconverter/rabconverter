@@ -14,7 +14,8 @@ export type RabClassificationStatus =
   | "UNREADABLE_PDF"
   | "LIKELY_RAB"
   | "NEEDS_CONFIRMATION"
-  | "NOT_RAB";
+  | "NOT_RAB"
+  | "NEEDS_MORE_PAGES";
 
 export interface RabClassificationResult {
   status: RabClassificationStatus;
@@ -35,3 +36,24 @@ export declare function classifyRabDocument(
   extractedText: string,
   options?: { ocrAttempted?: boolean },
 ): RabClassificationResult;
+
+export interface RabPageTextResult {
+  pageNumber: number;
+  textChars: number;
+  textFound: boolean;
+  truncated: boolean;
+  classification: RabClassificationResult;
+}
+
+export interface RabDocumentSummary extends RabClassificationResult {
+  complete: boolean;
+  pagesReviewed: number;
+  pagesNeedingOcr: number[];
+  truncatedPages: number[];
+  structuralCostEvidence: boolean;
+}
+
+export declare function summarizeRabPageClassifications(
+  pages: RabPageTextResult[],
+  options?: { complete?: boolean },
+): RabDocumentSummary;
