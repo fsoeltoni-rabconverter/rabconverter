@@ -160,3 +160,33 @@ h1 span { color: #247454; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+
+/* Server preflight feedback — keeps the existing layout and typography unchanged. */
+.preflight-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid #e9e7d8;
+  border-radius: 9px;
+  background: #fbfaf3;
+  color: #777356;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.preflight-panel > .notice-dot {
+  display: none;
+}
+.preflight-panel.is-success {
+  border-color: #cfe3d4;
+  background: #f2f8f3;
+  color: #285a3c;
+}
+.preflight-detail {
+  display: block;
+  color: #68786d;
+  font-size: 10px;
+}
