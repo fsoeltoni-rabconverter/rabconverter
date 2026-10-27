@@ -134,7 +134,6 @@ export default function App() {
     setOcrBusy(false);
     setOcrProgressText("");
     setOcrNotice("");
-    setOcrPages({});
     setConversionBusy(false);
     setConversionProgressText("");
     setConversionNotice("");
