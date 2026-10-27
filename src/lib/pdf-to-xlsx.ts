@@ -1,8 +1,9 @@
 import * as pdfjsLib from "pdfjs-dist";
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.mjs?url";
 import * as XLSX from "xlsx";
 import { ocrPdfPages, type LocalOcrPageResult, type LocalOcrProgress } from "./local-ocr.js";
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.mjs", import.meta.url).toString();
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 export const MAX_CONVERSION_PAGES = 50;
 
@@ -283,7 +284,6 @@ function workbookCellRows(sourceRows: SourceRow[], pageCount: number, scannedPag
   });
 
   if (standardized.length > 0) {
-    const lastDataRow = standardized.length + 1;
     standardAoA.push(["", "TOTAL HASIL KONVERSI", "", "", "", null]);
     const totalRow = standardAoA.length;
     formulaRows.push({ rowNumber: totalRow, value: standardized.reduce((sum, row) => {
@@ -292,14 +292,11 @@ function workbookCellRows(sourceRows: SourceRow[], pageCount: number, scannedPag
         ? (parseIndonesianNumber(String(row.volume)) ?? 0) * (parseIndonesianNumber(String(row.unitPrice)) ?? 0)
         : 0));
     }, 0) });
-    void lastDataRow;
   }
 
   const wsStandard = XLSX.utils.aoa_to_sheet(standardAoA);
   for (const formula of formulaRows) {
-    const cellRef = formula.rowNumber === standardAoA.length && standardized.length > 0 && standardAoA[formula.rowNumber - 1][1] === "TOTAL HASIL KONVERSI"
-      ? `F${formula.rowNumber}`
-      : `F${formula.rowNumber}`;
+    const cellRef = `F${formula.rowNumber}`;
     const isTotal = standardAoA[formula.rowNumber - 1]?.[1] === "TOTAL HASIL KONVERSI";
     wsStandard[cellRef] = isTotal
       ? { t: "n", f: standardized.length > 0 ? `SUM(F2:F${standardized.length + 1})` : "0", v: formula.value }
