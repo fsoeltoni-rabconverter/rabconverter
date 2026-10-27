@@ -190,3 +190,31 @@ h1 span { color: #247454; }
   color: #68786d;
   font-size: 10px;
 }
+
+
+.secondary-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 10px;
+  padding: 11px 16px;
+  border: 1px solid #cbdccf;
+  border-radius: 10px;
+  color: #195b3d;
+  background: #f7fbf7;
+  font-size: 12px;
+  font-weight: 750;
+  transition: background .18s ease, border-color .18s ease, transform .18s ease;
+}
+.secondary-button:hover:not(:disabled) {
+  background: #eaf4ed;
+  border-color: #9fc3aa;
+  transform: translateY(-1px);
+}
+.secondary-button:disabled {
+  cursor: not-allowed;
+  color: #87978b;
+  background: #f1f4f1;
+}

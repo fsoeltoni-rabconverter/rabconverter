@@ -21,6 +21,7 @@ button{font:700 13px "Plus Jakarta Sans",sans-serif;cursor:pointer}.primary{disp
 .file-state{display:flex;flex-direction:column;align-items:stretch;width:100%;max-width:440px;min-width:0;gap:15px}.file-row{display:grid;grid-template-columns:48px minmax(0,1fr) 36px;gap:12px;align-items:center;padding:13px;border:1px solid #e3e9e4;border-radius:12px;background:#fff}
 .file-state .fileicon{width:46px;height:50px;transform:none;box-shadow:none}.file-state .fileicon svg{width:27px;height:30px}.meta{display:flex;flex-direction:column;gap:4px;min-width:0}.kicker{font-size:9px;letter-spacing:1.25px;font-weight:800;color:#42815d}.filename{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;color:#29362e}.size{font-size:11px;color:#909a93}
 .remove{border:1px solid #e6ebe6;background:#f6f8f6;color:#67756b;border-radius:8px;width:34px;height:34px;font-size:19px;line-height:1}.state-note{display:flex;gap:8px;align-items:flex-start;font-size:11px;line-height:1.5;color:#777356;background:#fbfaf3;border:1px solid #e9e7d8;border-radius:9px;padding:10px 12px}.state-note .dot{flex-shrink:0;margin:4px 0 0;background:#d4ac48}.state-note.is-success{background:#f2f8f3;border-color:#cfe3d4;color:#285a3c}.state-note.is-success .dot{background:#4a9564}.state-actions{display:flex;flex-direction:column;align-items:center;gap:0}.state-actions .primary{width:100%}.state-actions .limit{text-align:center}
+.secondary{display:flex;align-items:center;justify-content:center;width:100%;min-height:42px;margin-top:10px;padding:11px 14px;border:1px solid #cbdccf;border-radius:9px;color:#195b3d;background:#f7fbf7;font-size:12px;font-weight:750;transition:background .18s,border-color .18s}.secondary:hover:not(:disabled){background:#eaf4ed;border-color:#9fc3aa}.secondary:disabled{cursor:not-allowed;color:#87978b;background:#f1f4f1}
 .err{color:#a63d35;font-size:12px;text-align:center;margin:12px 0 0}.reassure{display:flex;align-items:center;gap:15px;color:#77827a;margin-top:17px;font-size:11px}.item{display:flex;align-items:center;gap:7px;white-space:nowrap}.check{display:grid;place-items:center;border:1px solid #c8ddce;color:#40845e;border-radius:50%;width:14px;height:14px;font-size:9px}.separator{width:3px;height:3px;border-radius:50%;background:#c8d1ca}
 footer{border-top:1px solid rgba(215,224,217,.72);display:flex;justify-content:space-between;align-items:center;gap:16px;width:min(1160px,calc(100% - 64px));min-height:60px;margin:auto auto 0;color:#9aa39c;font-size:10px}.footnote{color:#a9b0aa}
 @media(min-height:850px){main{padding-top:66px}.card{min-height:330px}}
@@ -51,16 +52,16 @@ footer{border-top:1px solid rgba(215,224,217,.72);display:flex;justify-content:s
 <div class="hero"><div class="eyebrow"><span class="line"></span>PDF RAB MENJADI EXCEL</div><h1>RAB PDF ke Excel.<br><span>Tanpa Ketik Ulang.</span></h1><p class="desc">Ubah tabel RAB atau BoQ PDF menjadi Excel yang bisa diedit.</p></div>
 <section class="card" id="card" aria-label="Area upload PDF RAB">
 <div id="empty"><div class="illus"><div class="orbit"></div><div class="orbit two"></div><div class="fileicon"><svg viewBox="0 0 32 36" aria-hidden="true"><path d="M5 1.5h14l8 8V32a2.5 2.5 0 0 1-2.5 2.5h-19A2.5 2.5 0 0 1 3 32V4a2.5 2.5 0 0 1 2-2.5Z" fill="#fff" stroke="currentColor" stroke-width="1.5"/><path d="M19 1.5v8h8" fill="#eef5f0" stroke="currentColor" stroke-width="1.5"/><path d="M8 19h13M8 23.5h13M8 28h9" stroke="#638574" stroke-width="1.7" stroke-linecap="round"/></svg></div><div class="tag pdf">PDF</div><div class="tag xlsx">XLSX ↗</div></div><h2>Mulai dari PDF RAB atau BoQ kamu</h2><p class="hint">Tarik file ke sini, atau pilih PDF RAB/BoQ dari perangkat.</p><button class="primary" id="choose">Pilih PDF RAB <span>→</span></button><p class="limit">PDF saja · Maks. 30 MiB</p></div>
-<div id="chosen" class="file-state" hidden><div class="file-row"><div class="fileicon"><svg viewBox="0 0 32 36" aria-hidden="true"><path d="M5 1.5h14l8 8V32a2.5 2.5 0 0 1-2.5 2.5h-19A2.5 2.5 0 0 1 3 32V4a2.5 2.5 0 0 1 2-2.5Z" fill="#fff" stroke="currentColor" stroke-width="1.5"/><path d="M19 1.5v8h8" fill="#eef5f0" stroke="currentColor" stroke-width="1.5"/><path d="M8 19h13M8 23.5h13M8 28h9" stroke="#638574" stroke-width="1.7" stroke-linecap="round"/></svg></div><div class="meta"><span class="kicker">PDF DIPILIH</span><strong class="filename" id="filename"></strong><span class="size" id="filesize"></span></div><button class="remove" id="remove" aria-label="Ganti atau hapus file terpilih">×</button></div><div class="state-note" id="preflight-note"><span class="dot"></span>Pemeriksaan struktur saja; belum membaca tabel RAB atau menjalankan OCR.</div><div class="state-actions"><button class="primary" id="preflight" type="button">Periksa PDF <span>→</span></button><p class="limit" id="preflight-help">File dikirim untuk diperiksa, lalu langsung dibuang.</p></div></div>
+<div id="chosen" class="file-state" hidden><div class="file-row"><div class="fileicon"><svg viewBox="0 0 32 36" aria-hidden="true"><path d="M5 1.5h14l8 8V32a2.5 2.5 0 0 1-2.5 2.5h-19A2.5 2.5 0 0 1 3 32V4a2.5 2.5 0 0 1 2-2.5Z" fill="#fff" stroke="currentColor" stroke-width="1.5"/><path d="M19 1.5v8h8" fill="#eef5f0" stroke="currentColor" stroke-width="1.5"/><path d="M8 19h13M8 23.5h13M8 28h9" stroke="#638574" stroke-width="1.7" stroke-linecap="round"/></svg></div><div class="meta"><span class="kicker">PDF DIPILIH</span><strong class="filename" id="filename"></strong><span class="size" id="filesize"></span></div><button class="remove" id="remove" aria-label="Ganti atau hapus file terpilih">×</button></div><div class="state-note" id="preflight-note"><span class="dot"></span>Pemeriksaan struktur saja; belum membaca tabel RAB atau menjalankan OCR.</div><div class="state-actions"><button class="primary" id="preflight" type="button">Periksa PDF <span>→</span></button><button class="secondary" id="local-ocr" type="button" hidden>OCR Lokal</button><p class="limit" id="preflight-help">File dikirim untuk diperiksa, lalu langsung dibuang.</p><p class="limit" id="ocr-progress" role="status" hidden></p></div></div>
 <input class="hidden" id="file" type="file" accept="application/pdf,.pdf" aria-label="Pilih dokumen PDF RAB"><p class="err" id="err" role="alert" hidden></p>
 </section>
 <div class="reassure"><div class="item"><span style="color:#38815b;font-size:17px">↗</span>Excel bisa diedit</div><span class="separator"></span><div class="item"><span class="check">✓</span>Kurangi input manual</div><span class="separator"></span><div class="item"><span class="check">✓</span>Periksa hasil sebelum dipakai</div></div>
 </main><footer><span>© 2026 RabConverter</span><span class="footnote">Dibuat untuk pekerjaan RAB yang lebih praktis.</span></footer></div>
 <script>
-const input=document.getElementById('file'),card=document.getElementById('card'),empty=document.getElementById('empty'),chosen=document.getElementById('chosen'),err=document.getElementById('err'),preflight=document.getElementById('preflight'),note=document.getElementById('preflight-note'),help=document.getElementById('preflight-help');
+const input=document.getElementById('file'),card=document.getElementById('card'),empty=document.getElementById('empty'),chosen=document.getElementById('chosen'),err=document.getElementById('err'),preflight=document.getElementById('preflight'),localOcr=document.getElementById('local-ocr'),ocrProgress=document.getElementById('ocr-progress'),note=document.getElementById('preflight-note'),help=document.getElementById('preflight-help');
 const PREFLIGHT_URL='https://zkcziucjogprfzhjuaex.supabase.co/functions/v1/preflight-rab';
 const MAX_BYTES=30*1024*1024;
-let selectedFile=null,pickerOpen=false,requestId=0,activeController=null,busy=false;
+let selectedFile=null,pickerOpen=false,requestId=0,activeController=null,busy=false,ocrBusy=false,ocrAbortController=null,ocrNotice='';
 let pageReports=[],lastPreflightResult=null,nextStartPage=1;
 input.addEventListener('cancel',()=>{pickerOpen=false});
 function showError(message){err.textContent=message;err.hidden=false}
@@ -79,9 +80,16 @@ function resetFile(){
   requestId+=1;
   activeController?.abort();
   activeController=null;
+  ocrAbortController?.abort();
+  ocrAbortController=null;
   busy=false;
+  ocrBusy=false;
   selectedFile=null;
   pageReports=[];
+  ocrNotice='';
+  localOcr.hidden=true;
+  ocrProgress.hidden=true;
+  ocrProgress.textContent='';
   lastPreflightResult=null;
   nextStartPage=1;
   chosen.hidden=true;
@@ -126,9 +134,16 @@ async function showFile(file){
   const validationId=++requestId;
   activeController?.abort();
   activeController=null;
+  ocrAbortController?.abort();
+  ocrAbortController=null;
   busy=false;
+  ocrBusy=false;
   selectedFile=null;
   pageReports=[];
+  ocrNotice='';
+  localOcr.hidden=true;
+  ocrProgress.hidden=true;
+  ocrProgress.textContent='';
   lastPreflightResult=null;
   nextStartPage=1;
   err.hidden=true;
@@ -157,7 +172,8 @@ const SIGNAL_SCORES={rab_title:3,item_description:2,quantity_or_unit:2,price_or_
 function summarizePageReports(pages,complete){
   const signals=[...new Set(pages.flatMap(page=>page.classification?.signals||[]))];
   const score=signals.reduce((sum,key)=>sum+(SIGNAL_SCORES[key]||0),0);
-  const pagesNeedingOcr=pages.filter(page=>page.textFound===false||page.textChars===0).map(page=>page.pageNumber);
+  const pagesNeedingOcr=pages.filter(page=>page.ocrAttempted!==true&&(page.textFound===false||page.textChars===0)).map(page=>page.pageNumber);
+  const pagesUnreadableAfterOcr=pages.filter(page=>page.ocrAttempted===true&&(page.textFound===false||page.textChars===0)).map(page=>page.pageNumber);
   const truncatedPages=pages.filter(page=>page.truncated).map(page=>page.pageNumber);
   const description=signals.includes('item_description'),quantity=signals.includes('quantity_or_unit'),price=signals.includes('price_or_amount'),totals=signals.includes('totals');
   const structural=signals.includes('repeated_item_rows')||(description&&quantity&&price)||(description&&price&&totals);
@@ -165,22 +181,60 @@ function summarizePageReports(pages,complete){
   if(score>=6&&signals.length>=2&&structural){status='LIKELY_RAB';reasons=['rab_signals_and_cost_structure_detected']}
   else if(score>=3){status='NEEDS_CONFIRMATION';reasons=[structural?'classification_score_needs_confirmation':'cost_structure_not_strong_enough_for_auto_accept']}
   else if(pagesNeedingOcr.length>0&&complete){status='NEEDS_OCR';reasons=['one_or_more_pages_have_no_extractable_text']}
+  else if(pagesUnreadableAfterOcr.length>0&&complete){status='UNREADABLE_PDF';reasons=['one_or_more_pages_have_no_text_after_local_ocr']}
   else if(!complete){status='NEEDS_MORE_PAGES';reasons=['insufficient_evidence_in_pages_reviewed_so_far']}
   else{status='NOT_RAB';reasons=['insufficient_rab_boq_evidence']}
-  return {status,score,signals,reasons,complete,pagesReviewed:pages.length,pagesNeedingOcr,truncatedPages,structuralCostEvidence:structural};
+  return {status,score,signals,reasons,complete,pagesReviewed:pages.length,pagesNeedingOcr,pagesUnreadableAfterOcr,truncatedPages,structuralCostEvidence:structural};
 }
 function classificationLabel(summary){
   if(summary.status==='LIKELY_RAB')return summary.complete?'Kemungkinan besar RAB/BoQ':'Sementara terlihat seperti RAB/BoQ';
   if(summary.status==='NEEDS_CONFIRMATION')return 'Belum pasti RAB/BoQ — perlu konfirmasi';
   if(summary.status==='NOT_RAB')return 'Tidak ditemukan cukup ciri RAB/BoQ';
   if(summary.status==='NEEDS_OCR')return 'Ada halaman yang memerlukan OCR';
+  if(summary.status==='UNREADABLE_PDF')return 'OCR lokal belum berhasil membaca beberapa halaman';
   return 'Bukti belum cukup — periksa halaman berikutnya';
 }
+function renderSummary(totalPages){
+  const complete=Boolean(lastPreflightResult&&lastPreflightResult.nextStartPage===null&&pageReports.length===totalPages);
+  const summary=summarizePageReports(pageReports,complete);
+  updateNote(classificationLabel(summary),summary.status==='LIKELY_RAB');
+  let details=pageReports.length+' dari '+totalPages+' halaman diperiksa';
+  details+=complete?' · pemeriksaan seluruh halaman selesai':' · pemeriksaan bertahap';
+  if(summary.pagesNeedingOcr.length)details+=' · '+summary.pagesNeedingOcr.length+' halaman tanpa teks siap untuk OCR lokal';
+  if(summary.pagesUnreadableAfterOcr.length)details+=' · OCR tidak menemukan teks pada '+summary.pagesUnreadableAfterOcr.length+' halaman';
+  if(summary.truncatedPages.length)details+=' · teks dibatasi pada '+summary.truncatedPages.length+' halaman';
+  if(ocrNotice)details+=' · '+ocrNotice;
+  help.textContent=details+'. OCR memproses scan di perangkat; PDF/teks OCR tidak dikirim ke layanan OCR.';
+  localOcr.hidden=summary.pagesNeedingOcr.length===0||ocrBusy;
+  if(!localOcr.hidden)localOcr.textContent='OCR Lokal · Halaman '+summary.pagesNeedingOcr.slice(0,5).join(', ');
+}
+function classifyLocalText(extractedText,ocrAttempted){
+  const text=String(extractedText||'').trim();
+  if(!text)return {status:ocrAttempted?'UNREADABLE_PDF':'NEEDS_OCR',score:0,signals:[],reasons:[ocrAttempted?'text_unreadable_after_ocr':'no_text_layer_ocr_needed']};
+  const definitions=[
+    ['rab_title',3,/\b(?:RAB|RENCANA\s+ANGGARAN\s+BIAYA|BOQ|BILL\s+OF\s+QUANTITIES|DAFTAR\s+KUANTITAS(?:\s+DAN\s+HARGA)?|RENCANA\s+BIAYA)\b/i],
+    ['item_description',2,/\b(?:uraian(?:\s+pekerjaan)?|pekerjaan|description|deskripsi(?:\s+pekerjaan)?|item\s+pekerjaan)\b/i],
+    ['quantity_or_unit',2,/\b(?:volume|kuantitas|qty|quantity|satuan|unit|uom)\b/i],
+    ['price_or_amount',2,/\b(?:harga\s+satuan|unit\s+price|jumlah\s+harga|amount|total\s+(?:biaya|harga)|biaya\s+total|nilai\s+biaya|anggaran)\b/i],
+    ['construction_terms',1,/\b(?:material|upah|beton|pondasi|fondasi|ahsp|hspk|pasir|semen|pekerjaan\s+tanah|konstruksi)\b/i],
+    ['totals',1,/\b(?:subtotal|sub\s+total|grand\s+total|jumlah\s+akhir|rekapitulasi|pajak|ppn)\b/i]
+  ];
+  const signals=[];let score=0;
+  for(const definition of definitions){if(definition[2].test(text)){signals.push(definition[0]);score+=definition[1]}}
+  const lines=text.split(/\r?\n/).map(line=>line.trim()).filter(Boolean);let qualifying=0;
+  for(const line of lines){const hasWords=/[A-Za-zÀ-ÖØ-öø-ÿ]{3,}/.test(line);const numbers=line.match(/(?:\d{1,3}(?:[.,]\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)?)/g)||[];if(hasWords&&numbers.length>=2)qualifying++;if(qualifying>=2)break}
+  if(qualifying>=2){signals.push('repeated_item_rows');score+=2}
+  const description=signals.includes('item_description'),quantity=signals.includes('quantity_or_unit'),price=signals.includes('price_or_amount'),totals=signals.includes('totals');
+  const structural=signals.includes('repeated_item_rows')||(description&&quantity&&price)||(description&&price&&totals);
+  if(score>=6&&signals.length>=2&&structural)return {status:'LIKELY_RAB',score,signals,reasons:['rab_signals_and_cost_structure_detected']};
+  if(score>=3)return {status:'NEEDS_CONFIRMATION',score,signals,reasons:[structural?'classification_score_needs_confirmation':'cost_structure_not_strong_enough_for_auto_accept']};
+  return {status:'NOT_RAB',score,signals,reasons:['insufficient_rab_boq_evidence']};
+}
 async function runPreflight(){
-  if(!selectedFile||busy)return;
+  if(!selectedFile||busy||ocrBusy)return;
   const restarting=lastPreflightResult&&lastPreflightResult.nextStartPage===null;
   const startPage=restarting?1:nextStartPage;
-  if(restarting){pageReports=[];lastPreflightResult=null;nextStartPage=1}
+  if(restarting){pageReports=[];lastPreflightResult=null;nextStartPage=1;ocrNotice='';localOcr.hidden=true}
   busy=true;
   const id=++requestId;
   const controller=new AbortController();
@@ -209,13 +263,7 @@ async function runPreflight(){
     lastPreflightResult=payload;
     nextStartPage=payload.nextStartPage??1;
     const complete=payload.nextStartPage===null&&pageReports.length===payload.pageCount;
-    const summary=summarizePageReports(pageReports,complete);
-    updateNote(classificationLabel(summary),summary.status==='LIKELY_RAB');
-    let details=pageReports.length+' dari '+payload.pageCount+' halaman diperiksa';
-    details+=complete?' · pemeriksaan seluruh halaman selesai':' · pemeriksaan bertahap';
-    if(summary.pagesNeedingOcr.length)details+=' · '+summary.pagesNeedingOcr.length+' halaman tidak memiliki teks; perlu OCR';
-    if(summary.truncatedPages.length)details+=' · teks dibatasi pada '+summary.truncatedPages.length+' halaman';
-    help.textContent=details+'. File tidak disimpan dan teks lengkap tidak dikirim ke browser.';
+    renderSummary(payload.pageCount);
     setPreflightLabel(payload.nextStartPage===null?'Ulangi Pemeriksaan':'Periksa Halaman Berikutnya');
   }catch(error){
     if(id!==requestId||(error&&error.name==='AbortError'))return;
@@ -231,10 +279,90 @@ async function runPreflight(){
     }
   }
 }
+async function runLocalOcr(){
+  if(!selectedFile||busy||ocrBusy)return;
+  const summary=summarizePageReports(pageReports,Boolean(lastPreflightResult&&lastPreflightResult.nextStartPage===null&&pageReports.length===lastPreflightResult.pageCount));
+  const targets=summary.pagesNeedingOcr.slice(0,5);
+  if(!targets.length)return;
+  ocrBusy=true;
+  const id=++requestId;
+  const controller=new AbortController();
+  ocrAbortController=controller;
+  let ocrWorker=null,workerTerminated=false,pdfTask=null;
+  const terminateWorker=async()=>{if(ocrWorker&&!workerTerminated){workerTerminated=true;await ocrWorker.terminate()}};
+  const abortWorker=()=>{void terminateWorker().catch(()=>undefined)};
+  controller.signal.addEventListener('abort',abortWorker,{once:true});
+  const throwIfAborted=()=>{if(controller.signal.aborted)throw new DOMException('OCR dibatalkan.','AbortError')};
+  const setProgress=(text)=>{ocrProgress.hidden=false;ocrProgress.textContent=text};
+  preflight.disabled=true;localOcr.disabled=true;
+  setProgress('Membuka PDF dan menyiapkan OCR lokal…');
+  err.hidden=true;
+  try{
+    const pdfjs=await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/build/pdf.mjs');
+    pdfjs.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/build/pdf.worker.mjs';
+    throwIfAborted();
+    pdfTask=pdfjs.getDocument({data:new Uint8Array(await selectedFile.arrayBuffer()),isEvalSupported:false,useWorkerFetch:false});
+    const pdf=await pdfTask.promise;
+    if(pdf.numPages<1||pdf.numPages>200||targets.some(page=>page>pdf.numPages))throw new Error('Jumlah halaman PDF tidak sesuai batas pemeriksaan.');
+    setProgress('Mengunduh mesin OCR dan model bahasa Indonesia + Inggris…');
+    const tess=await import('https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/+esm');
+    ocrWorker=await tess.createWorker('ind+eng',1,{workerPath:'https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/worker.min.js',logger:(event)=>{
+      if(id!==requestId||controller.signal.aborted)return;
+      const current=event.progress&&event.progress<1?' '+Math.round(event.progress*100)+'%':'';
+      const status=String(event.status||'');
+      if(status.toLowerCase().includes('recogniz'))setProgress('Mengenali teks halaman scan…'+current);
+      else if(status.toLowerCase().includes('loading'))setProgress('Menyiapkan model OCR lokal…'+current);
+    }});
+    throwIfAborted();
+    const recognizedReports=[];
+    for(let index=0;index<targets.length;index++){
+      throwIfAborted();
+      const pageNumber=targets[index];
+      setProgress('Merender halaman '+pageNumber+' ('+(index+1)+'/'+targets.length+')…');
+      const page=await pdf.getPage(pageNumber);
+      const canvas=document.createElement('canvas');
+      try{
+        const base=page.getViewport({scale:1});
+        const scale=Math.min(2,Math.sqrt(4000000/(base.width*base.height)),3000/Math.max(base.width,base.height));
+        if(!Number.isFinite(scale)||scale<0.35)throw new Error('Ukuran halaman terlalu besar untuk OCR lokal yang aman.');
+        const viewport=page.getViewport({scale});canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);
+        const context=canvas.getContext('2d',{alpha:false,willReadFrequently:true});
+        if(!context)throw new Error('Browser tidak dapat menyiapkan kanvas OCR.');
+        context.fillStyle='#fff';context.fillRect(0,0,canvas.width,canvas.height);
+        await page.render({canvasContext:context,viewport,background:'#ffffff'}).promise;
+        throwIfAborted();
+        setProgress('Mengenali teks halaman '+pageNumber+'…');
+        const recognized=await ocrWorker.recognize(canvas);
+        throwIfAborted();
+        const rawText=String(recognized.data.text||'').trim();const text=rawText.slice(0,20000);
+        recognizedReports.push({pageNumber,textChars:text.length,textFound:text.length>0,truncated:rawText.length>20000,ocrAttempted:true,classification:classifyLocalText(text,true)});
+      }finally{page.cleanup();canvas.width=0;canvas.height=0}
+    }
+    if(id!==requestId||controller.signal.aborted)return;
+    const resultByPage=new Map(recognizedReports.map(page=>[page.pageNumber,page]));
+    pageReports=pageReports.map(page=>resultByPage.has(page.pageNumber)?{...page,...resultByPage.get(page.pageNumber)}:page);
+    ocrNotice='OCR lokal selesai untuk halaman '+recognizedReports.map(page=>page.pageNumber).join(', ')+'. Teks tidak dikirim ke server.';
+    renderSummary(lastPreflightResult.pageCount);
+    setProgress('OCR lokal selesai. Periksa kembali hasil klasifikasi; teks OCR belum menjadi tabel Excel.');
+  }catch(error){
+    if(id===requestId&&!controller.signal.aborted)showError(error&&error.message?'OCR lokal gagal: '+error.message:'OCR lokal gagal. Periksa koneksi lalu coba lagi.');
+  }finally{
+    controller.signal.removeEventListener('abort',abortWorker);
+    await terminateWorker().catch(()=>undefined);
+    if(pdfTask)await pdfTask.destroy().catch(()=>undefined);
+    if(id===requestId){ocrBusy=false;ocrAbortController=null;preflight.disabled=false;localOcr.disabled=false;
+      const summary=summarizePageReports(pageReports,Boolean(lastPreflightResult&&lastPreflightResult.nextStartPage===null&&pageReports.length===lastPreflightResult.pageCount));
+      localOcr.hidden=summary.pagesNeedingOcr.length===0;
+      if(!localOcr.hidden)localOcr.textContent='OCR Lokal · Halaman '+summary.pagesNeedingOcr.slice(0,5).join(', ');
+      ocrProgress.hidden=false;
+    }
+  }
+}
 document.getElementById('choose').addEventListener('click',()=>{if(!pickerOpen){pickerOpen=true;input.click()}});
 input.addEventListener('change',event=>{pickerOpen=false;showFile(event.target.files[0]);input.value=''});
 document.getElementById('remove').addEventListener('click',resetFile);
 preflight.addEventListener('click',runPreflight);
+localOcr.addEventListener('click',runLocalOcr);
 card.addEventListener('dragover',event=>{event.preventDefault();card.classList.add('drag')});
 card.addEventListener('dragleave',()=>card.classList.remove('drag'));
 card.addEventListener('drop',event=>{event.preventDefault();card.classList.remove('drag');showFile(event.dataTransfer.files[0])});

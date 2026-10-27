@@ -1,6 +1,6 @@
 /**
  * Lightweight client-side checks and deterministic RAB/BoQ text classification.
- * Full PDF parsing and OCR belong to the server/extraction layer.
+ * PDF text extraction runs on the Edge Function; selective OCR runs locally in the browser.
  */
 export const MAX_FILE_SIZE_BYTES = 30 * 1024 * 1024;
 export const MAX_PDF_PAGES = 200;
